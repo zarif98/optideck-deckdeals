@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { SETTINGS, Setting } from "../utils/Settings";
 import { setLocale } from "../l10n";
+import { wishlistService } from "../service/WishlistService";
 
 export function useSettings() {
   const [fontSize, setFontSize] = useState<number>(SETTINGS.defaults.fontSize);
@@ -14,6 +15,9 @@ export function useSettings() {
   const [providers, setProviders] = useState<string[]>(SETTINGS.defaults.providers);
   const [historyRange, setHistoryRange] = useState<string>(SETTINGS.defaults.historyRange);
   const [locale, setLocaleState] = useState<string>(SETTINGS.defaults.locale);
+  const [wishlistAlerts, setWishlistAlerts] = useState<boolean>(SETTINGS.defaults.wishlistAlerts);
+  const [wishlistMinDiscount, setWishlistMinDiscount] = useState<number>(SETTINGS.defaults.wishlistMinDiscount);
+  const [wishlistCheckHours, setWishlistCheckHours] = useState<number>(SETTINGS.defaults.wishlistCheckHours);
 
   useEffect(() => {
     let mounted = true;
@@ -57,6 +61,18 @@ export function useSettings() {
       const loadedHistoryRange = await SETTINGS.load(Setting.HISTORY_RANGE);
       if (!mounted) return;
       if (loadedHistoryRange) setHistoryRange(String(loadedHistoryRange));
+
+      const loadedWishlistAlerts = await SETTINGS.load(Setting.WISHLIST_ALERTS);
+      if (!mounted) return;
+      if (loadedWishlistAlerts !== undefined) setWishlistAlerts(Boolean(loadedWishlistAlerts));
+
+      const loadedMinDiscount = await SETTINGS.load(Setting.WISHLIST_MIN_DISCOUNT);
+      if (!mounted) return;
+      if (loadedMinDiscount !== undefined) setWishlistMinDiscount(Number(loadedMinDiscount));
+
+      const loadedCheckHours = await SETTINGS.load(Setting.WISHLIST_CHECK_HOURS);
+      if (!mounted) return;
+      if (loadedCheckHours !== undefined) setWishlistCheckHours(Number(loadedCheckHours));
 
       const loadedLocale = await SETTINGS.load(Setting.LOCALE);
       if (!mounted) return;
@@ -137,6 +153,29 @@ export function useSettings() {
     SETTINGS.save(Setting.HISTORY_RANGE, Range);
   }
 
+  const toggleWishlistAlerts = () => {
+    const newVal = !wishlistAlerts;
+    setWishlistAlerts(newVal);
+    SETTINGS.save(Setting.WISHLIST_ALERTS, newVal);
+    // Re-arm (or tear down) the background watcher immediately.
+    if (newVal) {
+      void wishlistService.start();
+    } else {
+      void wishlistService.stop();
+    }
+  }
+
+  const saveWishlistMinDiscount = (d: number) => {
+    setWishlistMinDiscount(d);
+    SETTINGS.save(Setting.WISHLIST_MIN_DISCOUNT, d);
+  }
+
+  const saveWishlistCheckHours = (h: number) => {
+    setWishlistCheckHours(h);
+    SETTINGS.save(Setting.WISHLIST_CHECK_HOURS, h);
+    void wishlistService.restart();
+  }
+
   const saveLocale = (l: string) => {
     setLocaleState(l);
     setLocale(l);
@@ -167,5 +206,11 @@ export function useSettings() {
     saveHistoryRange,
     locale,
     saveLocale,
+    wishlistAlerts,
+    toggleWishlistAlerts,
+    wishlistMinDiscount,
+    saveWishlistMinDiscount,
+    wishlistCheckHours,
+    saveWishlistCheckHours,
   }
 }

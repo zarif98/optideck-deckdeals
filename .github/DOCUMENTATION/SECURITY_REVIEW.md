@@ -82,9 +82,12 @@ The plugin applies strict response filtering so compromised or malformed provide
 
 ### ITAD APIs (`src/service/PriceService.ts`)
 - Endpoint pinning:
-  - Only HTTPS host/path combinations are allowed:
+  - Only HTTPS host/path combinations on `api.isthereanydeal.com` are allowed:
     - `/games/lookup/v1`
     - `/games/history/v2`
+    - `/games/prices/v3` (live cross-store prices)
+    - `/games/info/v2` (title lookup for wishlist notifications)
+    - `/lookup/id/shop/61/v1` (bulk Steam app id resolution for wishlist checks)
 - Request input validation:
   - `appId` must be numeric.
   - `country` must be two uppercase letters (fallback to `US` otherwise).
@@ -94,8 +97,31 @@ The plugin applies strict response filtering so compromised or malformed provide
 - Strict response checks:
   - Lookup response must contain `found: true` and valid `game.id` / `game.slug`.
   - History response must parse to an array.
+  - Prices response must parse to an array; each deal is normalized with a finite
+    non-negative amount, a bounded shop id, and an `https://` URL (dropped otherwise).
+  - Bulk id lookup response must parse to a plain object; ids must be non-empty strings `<= 128` chars.
+  - Bulk request sizes are capped at 200 ids per call.
 - Fail-closed behavior:
   - Any URL-policy or schema violation returns a safe error and no data.
+
+### Steam wishlist API (`src/service/WishlistService.ts`)
+- Endpoint pinning:
+  - Only `https://api.steampowered.com/IWishlistService/GetWishlist/v1/` is accepted.
+- Request input validation:
+  - The SteamID is read from the local Steam client frontend and must match `^\d{17}$`.
+  - It is transmitted only as the `steamid` parameter of Steam's own API.
+- Response size bound:
+  - Response body must be present and `<= 4MB`.
+- Strict response checks:
+  - `response.items` must be an array; only positive integer `appid` values are kept.
+  - At most 500 wishlist entries are processed per check.
+- Fail-closed behavior:
+  - Any failure returns an empty list with a status code; the watcher retries on the
+    next interval and never throws into the UI.
+- Data handling:
+  - Wishlist contents stay on-device. Only the resolved ITAD game ids are sent to ITAD
+    (the same endpoint used for store pages), and nothing is sent to Optideck.
+  - Notification de-duplication state is stored in local plugin settings only.
 
 ### ExchangeRate API (`src/service/ExchangeRateService.ts`)
 - Endpoint pinning:
@@ -132,6 +158,7 @@ The plugin applies strict response filtering so compromised or malformed provide
 | `src/patches/StoreInjector.ts` | Steam Store webview integration: route tracking, websocket debugger connection, UI inject/update/teardown. |
 | `src/service/ProviderAuthService.ts` | Fetches and strictly validates provider API credentials from Optideck endpoint; in-memory caching. |
 | `src/service/PriceService.ts` | ITAD lookup/history retrieval, strict response checks, normalization for UI rendering. |
+| `src/service/WishlistService.ts` | Steam wishlist retrieval and scheduled cross-store deal alerts via Decky toasts. |
 | `src/service/ExchangeRateService.ts` | Exchange-rate retrieval with strict URL/payload validation and cache-first access. |
 | `src/utils/Settings.ts` | Frontend settings API wrapper over backend RPC and in-memory cache. |
 | `src/utils/Cache.ts` | In-memory cache and subscriber notification utility. |

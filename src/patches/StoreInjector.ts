@@ -137,14 +137,17 @@ export const injectStore = (serverApi: ServerAPI) => {
                                 </div>
                             </div>
 
-                            <!-- Row 1, Col 2: Lowest Price -->
+                            <!-- Row 1, Col 2: Best price available right now -->
                             <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                                <div style="font-size: 10px; color: #8f98a0; margin-bottom: 2px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">${t("store.lowestPrice")}</div>
+                                <div style="font-size: 10px; color: #8f98a0; margin-bottom: 2px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">${t("store.bestNow")}</div>
                                 <div style="font-size: 15px; color: #fff; font-weight: bold; margin-bottom: 0px;">
                                     <span id="dd-lowest-${appId}">${t("store.loading")}</span>
                                 </div>
-                                <div id="dd-lowest-date-${appId}" style="font-size: 11px; color: #8f98a0; text-align: center;">
-                                    <!-- Date - Store -->
+                                <div id="dd-lowest-date-${appId}" style="font-size: 11px; color: #67c1f5; text-align: center;">
+                                    <!-- Store (+ saving vs Steam) -->
+                                </div>
+                                <div id="dd-hist-low-${appId}" style="font-size: 10px; color: #8f98a0; text-align: center; margin-top: 2px;">
+                                    <!-- All-time low for context -->
                                 </div>
                             </div>
                             
@@ -271,6 +274,8 @@ export const injectStore = (serverApi: ServerAPI) => {
                 var historyRange = "${historyRange}";
                 var appId = "${appId}";
                 var targetCurrency = "${targetCurrency}";
+                // JSON-encoded so translations containing quotes cannot break the script.
+                var saveVsSteamTpl = ${JSON.stringify(t("store.saveVsSteam"))};
                 var exchangeRates = ${exchangeRatesJson};
                 
                 // PART 3C (browser context): conversion + DOM lookup + rendering pipeline.
@@ -301,6 +306,7 @@ export const injectStore = (serverApi: ServerAPI) => {
                 var currentStoreEl = document.getElementById('dd-current-store-' + appId);
                 var lowestEl = document.getElementById('dd-lowest-' + appId);
                 var lowestDateEl = document.getElementById('dd-lowest-date-' + appId);
+                var histLowEl = document.getElementById('dd-hist-low-' + appId);
                 var diffEl = document.getElementById('dd-diff-' + appId);
                 var graphEl = document.getElementById('dd-graph-' + appId);
                 var overlayEl = document.getElementById('dd-graph-overlay-' + appId);
@@ -420,6 +426,15 @@ export const injectStore = (serverApi: ServerAPI) => {
                     originalAmount: lowestInYear.originalAmount, // Original for display
                     originalCurrency: lowestInYear.originalCurrency
                 } : null;
+
+                // The headline second tile: the cheapest price you can actually pay
+                // today, across every selected store. data.best comes from ITAD's
+                // live prices endpoint; a historic low you can no longer buy at is
+                // demoted to the small print underneath.
+                var bestNow = data.best || null;
+                var bestConverted = bestNow
+                    ? convertCurrency(bestNow.amount, bestNow.currency || targetCurrency, targetCurrency)
+                    : null;
                 
                 // 1. Update Current Price and Lowest Price Info (Moved up)
                 var currentAmount = 0;
@@ -724,53 +739,64 @@ export const injectStore = (serverApi: ServerAPI) => {
                         currentStoreEl.textContent = currentEntry ? currentStore : "";
                     }
     
-                    // Calculate Difference (using converted amounts for accurate comparison)
+                    // The badge on the "best now" tile is that offer's own discount
+                    // off its regular price - a live, actionable number.
                     var diffText = '';
                     var diffColor = '#c6d4df';
-                    
-                    if (currentAmount > 0 && displayLowest) {
-                         if (currentAmount > displayLowest.amount + 0.01) {
-                                 var diff = currentAmount - displayLowest.amount;
-                                 var percent = ((diff / currentAmount) * 100).toFixed(0);
-                                 diffText = '-' + percent + '%';
-                                 diffColor = '#beee11'; // highlight discount
-                            } else if (Math.abs(currentAmount - displayLowest.amount) < 0.01) {
-                                 // All year low
-                                 diffText = '${t("store.allYearLow")}';
-                                 diffColor = '#ff9300';
-                            }
+
+                    if (bestNow && bestNow.cut > 0) {
+                        diffText = '-' + bestNow.cut + '%';
+                        diffColor = '#beee11';
                     }
 
-                    // Update Lowest Price Label (Line 0: Label + Diff)
+                    // Update Best Now Label (Line 0: Label + Discount)
                     var lowestLabelEl = document.querySelector('#dbpc-deckdeals-box-' + appId + ' .Deckdeals-info > div:nth-child(2) > div:first-child');
                     if (lowestLabelEl) {
-                         var labelHtml = '${t("store.lowestPrice")}';
+                         var labelHtml = '${t("store.bestNow")}';
                          if (diffText) {
-                             if (diffText === '${t("store.allYearLow")}') {
-                                labelHtml += ' <span style="color: ' + diffColor + ';">(' + diffText + ')</span>';
-                             } else {
-                                labelHtml += ' <span style="color: ' + diffColor + '; font-weight: bold;">(' + diffText + ')</span>';
-                             }
+                            labelHtml += ' <span style="color: ' + diffColor + '; font-weight: bold;">(' + diffText + ')</span>';
                          }
                          lowestLabelEl.innerHTML = labelHtml;
                     }
 
-                    // Update Lowest Price (show ORIGINAL currency)
+                    // Update Best Now Price (show the store's ORIGINAL currency)
                     if (lowestEl) {
                         try {
-                            if (displayLowest) {
-                                lowestEl.innerHTML = displayLowest.originalAmount.toFixed(2) + ' ' + displayLowest.originalCurrency;
+                            if (bestNow) {
+                                lowestEl.innerHTML = bestNow.amount.toFixed(2) + ' ' + (bestNow.currency || targetCurrency);
                             } else {
-                                lowestEl.innerHTML = '<span style="color: #8f98a0;">${t("store.noDataRecent")}</span>';
+                                lowestEl.innerHTML = '<span style="color: #8f98a0;">${t("store.noLiveDeals")}</span>';
                             }
                         } catch (e) {}
                     }
-                    
-                    // Update Lowest Date/Store (Line 2)
-                    if (lowestDateEl && displayLowest) {
+
+                    // Line 2: which store has it, and what you save versus Steam.
+                    if (lowestDateEl) {
                         try {
-                             var dateStr = formatDate(displayLowest.date);
-                             lowestDateEl.innerHTML = dateStr + ' - <span style="color: #67c1f5;">' + displayLowest.store + '</span>';
+                            if (bestNow) {
+                                var storeHtml = '<span style="color: #67c1f5;">' + bestNow.store + '</span>';
+                                if (currentAmount > 0 && bestConverted !== null && bestConverted < currentAmount - 0.01) {
+                                    var saving = ((currentAmount - bestConverted) / currentAmount) * 100;
+                                    storeHtml += ' <span style="color: #beee11;">' +
+                                        saveVsSteamTpl.replace('{percent}', saving.toFixed(0)) + '</span>';
+                                }
+                                lowestDateEl.innerHTML = storeHtml;
+                            } else {
+                                lowestDateEl.innerHTML = '';
+                            }
+                        } catch(e) {}
+                    }
+
+                    // Line 3: the historic low, kept as context in the small print.
+                    if (histLowEl) {
+                        try {
+                            if (displayLowest) {
+                                histLowEl.innerHTML = '${t("store.historicLowPrefix")} ' +
+                                    displayLowest.originalAmount.toFixed(2) + ' ' + displayLowest.originalCurrency +
+                                    ' - ' + formatDate(displayLowest.date);
+                            } else {
+                                histLowEl.innerHTML = '';
+                            }
                         } catch(e) {}
                     }
                 }

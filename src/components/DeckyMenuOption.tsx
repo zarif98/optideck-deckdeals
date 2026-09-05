@@ -1,10 +1,11 @@
 import { useSettings } from '../hooks/useSettings'
-import { DropdownItem, PanelSection, PanelSectionRow, ToggleField } from 'decky-frontend-lib'
+import { ButtonItem, DropdownItem, PanelSection, PanelSectionRow, ToggleField } from 'decky-frontend-lib'
 import { STORES } from '../utils/Stores';
 import { PROVIDERS } from '../utils/Providers';
 import { useState } from 'react';
 import { FaChevronDown, FaChevronRight } from 'react-icons/fa';
 import { t, getAvailableLocales } from '../l10n';
+import { wishlistService } from '../service/WishlistService';
 import { CURRENCY_METADATA } from '../utils/CurrencyMeta';
 
 const DeckyMenuOption = () => {
@@ -27,7 +28,39 @@ const DeckyMenuOption = () => {
     saveHistoryRange,
     locale,
     saveLocale,
+    wishlistAlerts,
+    toggleWishlistAlerts,
+    wishlistMinDiscount,
+    saveWishlistMinDiscount,
+    wishlistCheckHours,
+    saveWishlistCheckHours,
   } = useSettings();
+
+  const [wishlistChecking, setWishlistChecking] = useState(false);
+  const [wishlistStatus, setWishlistStatus] = useState<string | null>(null);
+
+  const wishlistErrorText = (error: string) => {
+    if (error === 'noSteamId') return t("settings.wishlist.error.noSteamId");
+    if (error === 'private') return t("settings.wishlist.error.private");
+    return t("settings.wishlist.error.generic");
+  };
+
+  const runWishlistCheck = async () => {
+    setWishlistChecking(true);
+    setWishlistStatus(null);
+    try {
+      const result = await wishlistService.check();
+      if (result.error) {
+        setWishlistStatus(wishlistErrorText(result.error));
+      } else if (result.found > 0) {
+        setWishlistStatus(t("settings.wishlist.status.found").replace("{count}", String(result.found)));
+      } else {
+        setWishlistStatus(t("settings.wishlist.status.none"));
+      }
+    } finally {
+      setWishlistChecking(false);
+    }
+  };
 
   const [storesExpanded, setStoresExpanded] = useState(false);
   const [providersExpanded, setProvidersExpanded] = useState(false);
@@ -501,6 +534,57 @@ const DeckyMenuOption = () => {
             onChange={() => toggleProvider(p.id)}
           />
         ))}
+      </PanelSection>
+
+      <PanelSection title={t("settings.wishlist.title")}>
+        <ToggleField
+          label={t("settings.wishlist.label")}
+          description={t("settings.wishlist.description")}
+          checked={wishlistAlerts}
+          onChange={toggleWishlistAlerts}
+        />
+        {wishlistAlerts && (
+          <>
+            <DropdownItem
+              label={t("settings.wishlist.minDiscount.label")}
+              description={t("settings.wishlist.minDiscount.description")}
+              rgOptions={[10, 20, 33, 50, 66, 75].map(value => ({ data: value, label: `${value}%` }))}
+              selectedOption={wishlistMinDiscount}
+              onChange={(option) => saveWishlistMinDiscount(Number(option.data))}
+            />
+            <DropdownItem
+              label={t("settings.wishlist.interval.label")}
+              description={t("settings.wishlist.interval.description")}
+              rgOptions={[1, 3, 6, 12, 24].map(value => ({
+                data: value,
+                label: t("settings.wishlist.interval.hours").replace("{count}", String(value))
+              }))}
+              selectedOption={wishlistCheckHours}
+              onChange={(option) => saveWishlistCheckHours(Number(option.data))}
+            />
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                disabled={wishlistChecking}
+                onClick={runWishlistCheck}
+              >
+                {wishlistChecking ? t("settings.wishlist.checkNow.running") : t("settings.wishlist.checkNow.label")}
+              </ButtonItem>
+            </PanelSectionRow>
+            {wishlistStatus && (
+              <PanelSectionRow>
+                <div style={{ fontSize: '11px', color: '#8f98a0', padding: '0 10px' }}>
+                  {wishlistStatus}
+                </div>
+              </PanelSectionRow>
+            )}
+            <PanelSectionRow>
+              <div style={{ fontSize: '10px', color: '#6b7280', padding: '4px 10px', lineHeight: '1.4' }}>
+                {t("settings.wishlist.privacyNote")}
+              </div>
+            </PanelSectionRow>
+          </>
+        )}
       </PanelSection>
 
       <PanelSection title={t("settings.about.title")}>

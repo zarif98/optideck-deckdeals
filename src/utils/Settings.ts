@@ -1,5 +1,6 @@
 import { ServerAPI } from "decky-frontend-lib";
 import { CACHE } from "./Cache";
+import { ALL_STORE_IDS, STEAM_STORE_ID } from "./Stores";
 
 export enum Setting {
   FONTSIZE = "fontSize",
@@ -13,6 +14,12 @@ export enum Setting {
   PROVIDERS = "providers",
   HISTORY_RANGE = "historyRange",
   LOCALE = "locale",
+  WISHLIST_ALERTS = "wishlistAlerts",
+  WISHLIST_MIN_DISCOUNT = "wishlistMinDiscount",
+  WISHLIST_CHECK_HOURS = "wishlistCheckHours",
+  WISHLIST_SEEN = "wishlistSeen",
+  WISHLIST_LAST_CHECK = "wishlistLastCheck",
+  STORES_MIGRATED = "storesMigrated",
 }
 
 export let SETTINGS: Settings
@@ -23,7 +30,7 @@ export class Settings {
     fontSize: 16,
     paddingBottom: 10,
     country: "US",
-    stores: [61],
+    stores: ALL_STORE_IDS,
     enabled: true,
     dateFormat: "default",
     showQuickLinks: true,
@@ -31,6 +38,12 @@ export class Settings {
     providers: ["itad"],
     historyRange: "1y",
     locale: "en",
+    wishlistAlerts: true,
+    wishlistMinDiscount: 20,
+    wishlistCheckHours: 6,
+    wishlistSeen: {},
+    wishlistLastCheck: 0,
+    storesMigrated: false,
   };
 
   constructor(serverAPI: ServerAPI) {
@@ -59,6 +72,25 @@ export class Settings {
       CACHE.setValue(key, this.defaults[key])
       return this.defaults[key];
     })
+  }
+
+  /**
+   * One-time upgrade for installs created before all stores were enabled by
+   * default. Users who never touched the store list were pinned to Steam-only
+   * ([61]), which made the cross-store comparison useless for them. Anyone who
+   * picked their own stores keeps their selection untouched.
+   */
+  async migrate() {
+    const alreadyMigrated = await this.load(Setting.STORES_MIGRATED);
+    if (alreadyMigrated) return;
+
+    const stores = await this.load(Setting.STORES);
+    const isLegacyDefault = Array.isArray(stores) && stores.length === 1 && stores[0] === STEAM_STORE_ID;
+    if (isLegacyDefault) {
+      await this.save(Setting.STORES, ALL_STORE_IDS);
+    }
+
+    await this.save(Setting.STORES_MIGRATED, true);
   }
 
   async save(key: Setting, value: any) {

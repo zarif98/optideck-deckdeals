@@ -33,7 +33,9 @@ You can install the plugin manually via the ZIP file:
 ## Features
 
 - **Store Page Integration**: Price information is injected directly into the Steam store page.
-- **Price Comparison**: Displays current prices from Steam and ~30 supported alternative providers.
+- **Best Price Right Now**: The headline figure is the cheapest price you can actually pay today across every selected store - not an all-time low you can no longer buy at. The historic low is kept underneath as context.
+- **Price Comparison**: Displays current prices from Steam and ~30 supported alternative providers, all enabled by default.
+- **Wishlist Alerts**: Notifies you when a game on your Steam wishlist goes on sale at *any* supported store, not just on Steam.
 - **Price History**: Tracks historical lows and includes price trend graphs.
 - **Next Sale Prediction**: Estimates upcoming sales using 5 years of historical price data (regardless of the displayed period).
 - **Currency Normalization**: Uses daily exchange rates for price comparison across different store currencies.
@@ -49,8 +51,13 @@ To provide accurate and up-to-date information, Deckdeals interacts with the fol
 | **Optideck API** (`api.optideck.gg`) | Fetches managed API keys for price and currency services. | Custom `X-App-ID` header for authentication |
 | **IsThereAnyDeal** (`isthereanydeal.com`) | Retrieves current prices, historic lows, and graph data. | AppID, Country Code, Store IDs |
 | **ExchangeRate-API** (`exchangerate-api.com`) | Fetches daily exchange rates for accurate price normalization. | Target Currency |
+| **Steam Web API** (`api.steampowered.com`) | Reads your public wishlist for deal alerts (only when Wishlist Alerts is enabled). | Your SteamID64 |
 
 All requests are made locally from your Steam Deck using Decky's secure network layer. Your Steam account data, inventory, and personal information are **never** accessed or shared.
+
+### Wishlist Alerts
+
+Wishlist Alerts reads your wishlist from Steam's public wishlist API using the SteamID of the signed-in account. This requires your Steam wishlist to be **public** (Steam Profile → Privacy Settings → Game details). Your SteamID is sent only to Steam's own API; no wishlist data leaves your device. The check runs on a configurable interval (default: every 6 hours), and each deal is announced once per price - it will not re-notify until the price changes.
 
 ## Security Review
 
