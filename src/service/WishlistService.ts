@@ -154,7 +154,7 @@ class WishlistService {
         return null;
     }
 
-    public async fetchWishlistAppIds(): Promise<{ appIds: string[]; error?: string }> {
+    public async fetchWishlistAppIds(): Promise<{ appIds: string[]; steamId?: string; error?: string }> {
         if (!this.serverApi) return { appIds: [], error: "notReady" };
 
         const steamId = this.getSteamId();
@@ -170,7 +170,7 @@ class WishlistService {
             const body = this.parseBodyString(res.result);
             if (!body || body.length > this.MAX_RESPONSE_BYTES) return { appIds: [], error: "badResponse" };
 
-            return parseWishlistAppIds(JSON.parse(body), this.MAX_WISHLIST_APPS);
+            return { ...parseWishlistAppIds(JSON.parse(body), this.MAX_WISHLIST_APPS), steamId };
         } catch (e) {
             console.error("[Deckdeals] Wishlist fetch failed", e);
             return { appIds: [], error: "exception" };
@@ -201,7 +201,7 @@ class WishlistService {
             const enabled = await SETTINGS.load(Setting.WISHLIST_ALERTS);
             if (!enabled) return { found: 0, checked: 0, error: "disabled" };
 
-            const { appIds, error } = await this.fetchWishlistAppIds();
+            const { appIds, steamId, error } = await this.fetchWishlistAppIds();
             if (error) {
                 this.lastError = error;
                 return { found: 0, checked: 0, error };
@@ -242,7 +242,7 @@ class WishlistService {
             const isFirstRun = !(await SETTINGS.load(Setting.WISHLIST_SEEDED));
             const { announce, nextSeen } = planAnnouncements(candidates, seen, isFirstRun);
 
-            if (announce.length > 0) await this.announce(announce);
+            if (announce.length > 0) await this.announce(announce, steamId ?? "");
 
             await SETTINGS.save(Setting.WISHLIST_SEEN, nextSeen);
             await SETTINGS.save(Setting.WISHLIST_LAST_CHECK, Date.now());
@@ -268,13 +268,33 @@ class WishlistService {
      * tapped notification lands on the full cross-store comparison rather than
      * just telling the user a deal exists somewhere.
      */
-    private openStorePage(appId: string) {
+    private navigateTo(url: string) {
         try {
             Navigation.CloseSideMenus();
-            Navigation.NavigateToSteamWeb(`https://store.steampowered.com/app/${appId}/`);
+            Navigation.NavigateToSteamWeb(url);
         } catch (e) {
-            console.error("[Deckdeals] Could not open store page", e);
+            console.error("[Deckdeals] Could not open page", e);
         }
+    }
+
+    private storePageUrl(appId: string): string {
+        return `https://store.steampowered.com/app/${appId}/`;
+    }
+
+    /**
+     * Where a summary toast should lead.
+     *
+     * With more games than we can name individually, the wishlist is the only
+     * destination that reaches all of them. Steam's wishlist shows Steam's own
+     * prices only, so a discount found at another store will not be marked
+     * there - breadth is the right tradeoff when the alternative is surfacing
+     * one game out of many.
+     *
+     * The id is the one the wishlist was fetched with, so it is always valid
+     * here: a check cannot reach this point without it.
+     */
+    private wishlistUrl(steamId: string): string {
+        return `https://store.steampowered.com/wishlist/profiles/${steamId}/`;
     }
 
     private formatDeal(deal: Deal): string {
@@ -284,7 +304,7 @@ class WishlistService {
             .replace("{store}", deal.store);
     }
 
-    private async announce(candidates: WishlistCandidate[]) {
+    private async announce(candidates: WishlistCandidate[], steamId: string) {
         if (!this.serverApi) return;
 
         // Biggest discount first, so the summary toast leads with the best find.
@@ -298,7 +318,7 @@ class WishlistService {
                     title,
                     body: this.formatDeal(candidate.deal),
                     duration: 8000,
-                    onClick: () => this.openStorePage(candidate.appId),
+                    onClick: () => this.navigateTo(this.storePageUrl(candidate.appId)),
                 });
             }
             return;
@@ -306,11 +326,14 @@ class WishlistService {
 
         const headline = byDiscount[0];
         const title = await priceService.getGameTitle(headline.gameId) || t("wishlist.toast.fallbackTitle");
+        // Resolved now rather than at click time, so signing out later cannot
+        // leave the toast pointing nowhere.
+        const summaryDestination = this.wishlistUrl(steamId);
         this.serverApi.toaster.toast({
             title: t("wishlist.toast.summaryTitle").replace("{count}", String(byDiscount.length)),
             body: `${title} - ${this.formatDeal(headline.deal)}`,
             duration: 10000,
-            onClick: () => this.openStorePage(headline.appId),
+            onClick: () => this.navigateTo(summaryDestination),
         });
     }
 

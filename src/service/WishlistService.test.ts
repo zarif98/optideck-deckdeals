@@ -396,7 +396,7 @@ describe("notification click-through", () => {
         expect(navCalls[0].method).toBe("CloseSideMenus");
     });
 
-    it("makes the summary toast open the game it names", async () => {
+    it("makes the summary toast open the wishlist, which reaches every flagged game", async () => {
         const world = makeWorld({
             wishlist: [11, 22, 33, 44],
             itadIds: { "11": "g1", "22": "g2", "33": "g3", "44": "g4" },
@@ -420,7 +420,7 @@ describe("notification click-through", () => {
 
         expect(navCalls).toContainEqual({
             method: "NavigateToSteamWeb",
-            arg: "https://store.steampowered.com/app/33/",
+            arg: `https://store.steampowered.com/wishlist/profiles/${STEAM_ID}/`,
         });
     });
 });
