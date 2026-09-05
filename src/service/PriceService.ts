@@ -1,6 +1,8 @@
 import { ServerAPI } from "decky-frontend-lib";
 import { SETTINGS, Setting } from "../utils/Settings";
-import { ALL_STORE_IDS, STEAM_STORE_ID, STORES } from "../utils/Stores";
+import { ALL_STORE_IDS, STORES } from "../utils/Stores";
+import { Deal, normalizeDeals } from "../utils/Deals";
+import { buildShopsParam, isValidAppId, isValidCountry, parseBulkLookupMap } from "../utils/ApiParsing";
 import { providerAuthService } from "./ProviderAuthService";
 
 /*
@@ -13,16 +15,7 @@ import { providerAuthService } from "./ProviderAuthService";
  * - Handles multiple fetchNoCors result shapes defensively.
  * - Returns structured errors without throwing into UI flow.
  */
-/** A price that is live right now at a specific store. */
-export interface Deal {
-    amount: number;
-    currency: string;
-    regular: number;
-    cut: number;
-    store: string;
-    storeId: number;
-    url: string;
-}
+export type { Deal };
 
 export interface PriceData {
     /** Cheapest price available right now across the user's selected stores. */
@@ -68,14 +61,6 @@ class PriceService {
     // PART 2: Input + URL + Payload Guards
     // Purpose: Constrain request targets and response formats before parsing.
     // =========================================================================
-
-    private isValidAppId(appId: string): boolean {
-        return /^\d{1,12}$/.test(appId);
-    }
-
-    private isValidCountry(country: string): boolean {
-        return /^[A-Z]{2}$/.test(country);
-    }
 
     private buildLookupUrl(apiKey: string, appId: string): string {
         const url = new URL(`https://${this.LOOKUP_HOST}${this.LOOKUP_PATH}`);
@@ -194,20 +179,10 @@ class PriceService {
     // =========================================================================
     private async getRequestScope(): Promise<{ country: string; shopsParam: string }> {
         const rawCountry = await SETTINGS.load(Setting.COUNTRY) || "US";
-        const country = this.isValidCountry(rawCountry) ? rawCountry : "US";
+        const country = isValidCountry(rawCountry) ? rawCountry : "US";
+        const stores = await SETTINGS.load(Setting.STORES) || ALL_STORE_IDS;
 
-        const storesArr = await SETTINGS.load(Setting.STORES) || ALL_STORE_IDS;
-        const validStores = Array.isArray(storesArr) ? storesArr : ALL_STORE_IDS;
-        // Steam is always included so the history graph keeps its reference line.
-        const storesWithSteam = validStores.includes(STEAM_STORE_ID) ? validStores : [...validStores, STEAM_STORE_ID];
-        const safeStoreIds = storesWithSteam
-            .filter((id) => Number.isInteger(id) && id >= 0 && id <= 9999)
-            .map((id) => String(id));
-
-        return {
-            country,
-            shopsParam: safeStoreIds.length > 0 ? safeStoreIds.join(",") : String(STEAM_STORE_ID)
-        };
+        return { country, shopsParam: buildShopsParam(stores) };
     }
 
     // =========================================================================
@@ -215,26 +190,6 @@ class PriceService {
     // Purpose: Ask ITAD what each store charges *right now* for a set of games.
     // Security: POSTs only to the pinned prices endpoint with plugin-built bodies.
     // =========================================================================
-    private normalizeDeal(raw: any): Deal | null {
-        const amount = raw?.price?.amount;
-        if (typeof amount !== "number" || !isFinite(amount) || amount < 0) return null;
-
-        const storeId = typeof raw?.shop?.id === "number" ? raw.shop.id : 0;
-        const url = typeof raw?.url === "string" && raw.url.startsWith("https://") ? raw.url : "";
-        const regular = typeof raw?.regular?.amount === "number" ? raw.regular.amount : amount;
-        const cut = typeof raw?.cut === "number" ? raw.cut : 0;
-
-        return {
-            amount,
-            currency: typeof raw?.price?.currency === "string" ? raw.price.currency : "USD",
-            regular,
-            cut,
-            store: STORES.find(s => s.id === storeId)?.title || raw?.shop?.name || "Unknown",
-            storeId,
-            url
-        };
-    }
-
     /**
      * Fetch live deals for up to MAX_BULK_IDS ITAD game ids in one request.
      * Returns a map of gameId -> deals sorted cheapest first. Failures return an
@@ -267,12 +222,7 @@ class PriceService {
                 for (const item of parsed) {
                     const id = (item as any)?.id;
                     if (typeof id !== "string") continue;
-                    const rawDeals = Array.isArray((item as any)?.deals) ? (item as any).deals : [];
-                    const deals = rawDeals
-                        .map((d: any) => this.normalizeDeal(d))
-                        .filter((d: Deal | null): d is Deal => d !== null)
-                        .sort((a: Deal, b: Deal) => a.amount - b.amount);
-                    out.set(id, deals);
+                    out.set(id, normalizeDeals((item as any)?.deals));
                 }
             } catch (e) {
                 console.error("[Deckdeals] Live deal fetch failed", e);
@@ -290,7 +240,7 @@ class PriceService {
         const out = new Map<string, string>();
         if (!this.serverApi) return out;
 
-        const safeAppIds = appIds.filter(id => this.isValidAppId(id));
+        const safeAppIds = appIds.filter(id => isValidAppId(id));
         if (safeAppIds.length === 0) return out;
 
         const apiKey = await providerAuthService.getItadKey();
@@ -310,13 +260,8 @@ class PriceService {
                 if (!res.success) continue;
 
                 const parsed = this.parseJsonBody(res.result);
-                if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
-
-                for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-                    const appId = key.startsWith("app/") ? key.slice(4) : key;
-                    if (typeof value === "string" && value.length > 0 && value.length <= 128) {
-                        out.set(appId, value);
-                    }
+                for (const [appId, gameId] of parseBulkLookupMap(parsed)) {
+                    out.set(appId, gameId);
                 }
             } catch (e) {
                 console.error("[Deckdeals] Bulk id lookup failed", e);
@@ -371,7 +316,7 @@ class PriceService {
     // =========================================================================
     public async getLowestPrice(appId: string): Promise<{ data: PriceData | null, error?: string, debug?: any }> {
         if (!this.serverApi) return { data: null, error: "ServerAPI not initialized" };
-        if (!this.isValidAppId(appId)) return { data: null, error: "Invalid app id format" };
+        if (!isValidAppId(appId)) return { data: null, error: "Invalid app id format" };
 
         const apiKey = await providerAuthService.getItadKey();
         if (!apiKey) return { data: null, error: "Failed to fetch ITAD API key" };

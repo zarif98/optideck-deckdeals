@@ -1,6 +1,7 @@
 import { ServerAPI } from "decky-frontend-lib";
 import { CACHE } from "./Cache";
-import { ALL_STORE_IDS, STEAM_STORE_ID } from "./Stores";
+import { ALL_STORE_IDS } from "./Stores";
+import { isLegacyStoreDefault } from "./ApiParsing";
 
 export enum Setting {
   FONTSIZE = "fontSize",
@@ -85,8 +86,7 @@ export class Settings {
     if (alreadyMigrated) return;
 
     const stores = await this.load(Setting.STORES);
-    const isLegacyDefault = Array.isArray(stores) && stores.length === 1 && stores[0] === STEAM_STORE_ID;
-    if (isLegacyDefault) {
+    if (isLegacyStoreDefault(stores)) {
       await this.save(Setting.STORES, ALL_STORE_IDS);
     }
 

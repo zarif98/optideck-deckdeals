@@ -5,9 +5,10 @@
   "scripts": {
     "build": "shx rm -rf dist && rollup -c",
     "watch": "rollup -c -w",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
     "deploy": "./deploy.sh",
-    "archive": "pnpm run build && rm -rf Deckdeals optideck-deckdeals-v$npm_package_version-beta.zip && mkdir -p Deckdeals/dist && cp dist/index.js Deckdeals/dist/ && cp main.py settings.py plugin.json package.json README.md LICENSE Deckdeals/ && zip -r optideck-deckdeals-v$npm_package_version-beta.zip Deckdeals -x \"*.DS_Store\" -x \"__MACOSX/*\" && rm -rf Deckdeals"
+    "archive": "pnpm run build && rm -rf Deckdeals optideck-deckdeals-v$npm_package_version-beta.zip && mkdir -p Deckdeals/dist && cp dist/index.js Deckdeals/dist/ && cp main.py settings.py plugin.json package.json README.md LICENSE Deckdeals/ && zip -r optideck-deckdeals-v$npm_package_version-beta.zip Deckdeals -x \"*.DS_Store\" -x \"__MACOSX/*\" && rm -rf Deckdeals",
+    "test:watch": "vitest"
   },
   "repository": {
     "type": "git",
@@ -35,7 +36,8 @@
     "rollup-plugin-import-assets": "^1.1.1",
     "shx": "^0.3.4",
     "tslib": "^2.4.0",
-    "typescript": "^4.7.4"
+    "typescript": "^4.7.4",
+    "vitest": "^2.1.9"
   },
   "dependencies": {
     "decky-frontend-lib": "^3.25.0",

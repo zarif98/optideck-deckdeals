@@ -163,6 +163,11 @@ The plugin applies strict response filtering so compromised or malformed provide
 | `src/utils/Settings.ts` | Frontend settings API wrapper over backend RPC and in-memory cache. |
 | `src/utils/Cache.ts` | In-memory cache and subscriber notification utility. |
 | `src/utils/Stores.ts` | Static store metadata mapping used for display names/IDs. |
+| `src/utils/Deals.ts` | Pure deal normalization, alert selection, and announcement de-duplication logic. |
+| `src/utils/ApiParsing.ts` | Pure validation/parsing of external API payloads and store-selection inputs. |
+| `src/utils/Deals.test.ts` | Unit tests for deal normalization and notification de-duplication. |
+| `src/utils/ApiParsing.test.ts` | Unit tests for external payload validation and store-selection handling. |
+| `vitest.config.ts` | Unit test runner configuration (pure logic in `src/utils` only). |
 | `src/utils/Providers.ts` | Static provider metadata/constants used by UI and services. |
 | `src/utils/CurrencyMeta.ts` | Currency metadata/constants used for display/normalization helpers. |
 | `src/hooks/useSettings.tsx` | React hook for consuming and updating plugin settings in UI. |

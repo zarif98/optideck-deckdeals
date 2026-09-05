@@ -1,6 +1,8 @@
 import { ServerAPI } from "decky-frontend-lib";
 import { SETTINGS, Setting } from "../utils/Settings";
-import { Deal, priceService } from "./PriceService";
+import { priceService } from "./PriceService";
+import { Deal, diffAnnouncements, pickWishlistDeal } from "../utils/Deals";
+import { isValidSteamId64, parseWishlistAppIds } from "../utils/ApiParsing";
 import { t } from "../l10n";
 
 /*
@@ -117,8 +119,7 @@ class WishlistService {
         }
 
         for (const candidate of candidates) {
-            const value = typeof candidate === "string" ? candidate : String(candidate ?? "");
-            if (/^\d{17}$/.test(value)) return value;
+            if (isValidSteamId64(candidate)) return String(candidate);
         }
         return null;
     }
@@ -169,18 +170,7 @@ class WishlistService {
             const body = this.parseBodyString(res.result);
             if (!body || body.length > this.MAX_RESPONSE_BYTES) return { appIds: [], error: "badResponse" };
 
-            const parsed = JSON.parse(body);
-            const items = parsed?.response?.items;
-            if (!Array.isArray(items)) return { appIds: [], error: "private" };
-
-            const appIds: string[] = [];
-            for (const item of items) {
-                const appId = (item as any)?.appid;
-                if (Number.isInteger(appId) && appId > 0) appIds.push(String(appId));
-                if (appIds.length >= this.MAX_WISHLIST_APPS) break;
-            }
-
-            return { appIds };
+            return parseWishlistAppIds(JSON.parse(body), this.MAX_WISHLIST_APPS);
         } catch (e) {
             console.error("[Deckdeals] Wishlist fetch failed", e);
             return { appIds: [], error: "exception" };
@@ -192,11 +182,6 @@ class WishlistService {
     // Purpose: Compare live prices against the user's discount threshold and
     //          announce anything not already seen at that price.
     // =========================================================================
-
-    /** Stable identity for a deal, so re-runs stay quiet until the price moves. */
-    private dealKey(deal: Deal): string {
-        return `${deal.storeId}:${deal.cut}:${deal.amount.toFixed(2)}`;
-    }
 
     private async getMinDiscount(): Promise<number> {
         const raw = await SETTINGS.load(Setting.WISHLIST_MIN_DISCOUNT);
@@ -241,30 +226,19 @@ class WishlistService {
             const dealsByGame = await priceService.getDealsForGameIds([...gameIdByApp.values()]);
             const minDiscount = await this.getMinDiscount();
 
-            // Pick the cheapest offer that actually clears the discount threshold.
-            // Taking the cheapest offer overall would let a permanently-cheap
-            // reseller listing (cut = 0) hide a genuine sale at another store.
             const candidates: WishlistCandidate[] = [];
             for (const [appId, gameId] of gameIdByApp) {
-                const deals = dealsByGame.get(gameId) || [];
-                const best = deals.find(d => d.cut >= minDiscount);
-                if (!best) continue;
-                candidates.push({ appId, gameId, deal: best });
+                const deal = pickWishlistDeal(dealsByGame.get(gameId) || [], minDiscount);
+                if (!deal) continue;
+                candidates.push({ appId, gameId, deal });
             }
 
-            // Drop anything already announced at this exact price, and forget
-            // games that have left the wishlist so they can alert again later.
             const seenRaw = await SETTINGS.load(Setting.WISHLIST_SEEN);
             const seen: Record<string, string> = (seenRaw && typeof seenRaw === "object" && !Array.isArray(seenRaw))
                 ? { ...seenRaw }
                 : {};
 
-            const fresh = candidates.filter(c => seen[c.appId] !== this.dealKey(c.deal));
-
-            // Only currently-discounted games are remembered. A game whose sale
-            // ends drops out of the map, so the next sale alerts again.
-            const nextSeen: Record<string, string> = {};
-            for (const c of candidates) nextSeen[c.appId] = this.dealKey(c.deal);
+            const { fresh, nextSeen } = diffAnnouncements(candidates, seen);
 
             if (fresh.length > 0) await this.announce(fresh);
 

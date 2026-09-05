@@ -59,6 +59,23 @@ All requests are made locally from your Steam Deck using Decky's secure network 
 
 Wishlist Alerts reads your wishlist from Steam's public wishlist API using the SteamID of the signed-in account. This requires your Steam wishlist to be **public** (Steam Profile → Privacy Settings → Game details). Your SteamID is sent only to Steam's own API; no wishlist data leaves your device. The check runs on a configurable interval (default: every 6 hours), and each deal is announced once per price - it will not re-notify until the price changes.
 
+## Development
+
+Build the frontend bundle:
+
+```bash
+pnpm install
+pnpm build
+```
+
+Run the unit tests:
+
+```bash
+pnpm test
+```
+
+Tests cover the pure logic in `src/utils` - deal normalization, which offer triggers a wishlist alert, notification de-duplication, and validation of everything that arrives from an external API. Anything requiring the Decky runtime or a live Steam client is verified on-device instead.
+
 ## Security Review
 
 For security reviewers and advanced users, start with:
