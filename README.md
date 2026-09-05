@@ -24,7 +24,7 @@
 You can install the plugin manually via the ZIP file:
 
 1. Download the [optideck-deckdeals-v1.1.1-beta.zip](https://github.com/ebdevag/optideck-deckdeals/releases/download/v1.1.1-beta/optideck-deckdeals-v1.1.1-beta.zip) (or fork the repo and zip it yourself).
-   - Fork/build guide: [`.github/FORK_AND_BUILD_ZIP.md`](.github/FORK_AND_BUILD_ZIP.md)
+   - Fork/build guide: [`.github/DOCUMENTATION/FORK_AND_BUILD_ZIP.md`](.github/DOCUMENTATION/FORK_AND_BUILD_ZIP.md)
 2. On your Steam Deck, go to **Decky Options**.
 3. Enable **Developer Mode** (via the General tab).
 4. Go to the **Developer Tab**.
