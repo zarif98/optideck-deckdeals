@@ -47,7 +47,7 @@ function makeWorld(overrides: Partial<WorldState> = {}): WorldState {
 
 /** Build the fake ServerAPI Decky would otherwise provide. */
 function makeServerApi(world: WorldState) {
-    const toasts: { title: string; body: string }[] = [];
+    const toasts: { title: string; body: string; onClick?: () => void }[] = [];
     const settingsStore: Record<string, unknown> = {};
     const requests: { url: string; body?: string }[] = [];
 
@@ -55,7 +55,9 @@ function makeServerApi(world: WorldState) {
 
     const serverApi = {
         toaster: {
-            toast: (t: any) => { toasts.push({ title: String(t.title), body: String(t.body) }); },
+            toast: (t: any) => {
+                toasts.push({ title: String(t.title), body: String(t.body), onClick: t.onClick });
+            },
         },
 
         callPluginMethod: async (method: string, args: any) => {
@@ -141,6 +143,8 @@ async function boot(world: WorldState) {
     const { providerAuthService } = await import("./ProviderAuthService");
     const { priceService } = await import("./PriceService");
     const { wishlistService } = await import("./WishlistService");
+    const decky = await import("decky-frontend-lib") as any;
+    decky.resetNavCalls();
 
     Cache.init();
     Settings.init(api);
@@ -148,7 +152,7 @@ async function boot(world: WorldState) {
     priceService.init(api);
     wishlistService.init(api);
 
-    return { ...harness, wishlistService, settingsModule, Setting };
+    return { ...harness, wishlistService, settingsModule, Setting, navCalls: decky.navCalls };
 }
 
 const deal = (overrides: Partial<FakeDeal> = {}): FakeDeal => ({
@@ -358,5 +362,65 @@ describe("wishlist alerts, end to end", () => {
             (r.url.includes(STEAM_ID) || (r.body ?? "").includes(STEAM_ID))
         );
         expect(leaked).toEqual([]);
+    });
+});
+
+describe("notification click-through", () => {
+    it("takes you to the game's Steam store page, where the comparison is shown", async () => {
+        const world = makeWorld({ deals: { "game-bg3": [] } });
+        const { wishlistService, toasts, navCalls } = await boot(world);
+        await wishlistService.check();
+
+        world.deals["game-bg3"] = [deal({ shopId: 35, shopName: "gog.com", cut: 60 })];
+        await wishlistService.check();
+
+        expect(toasts[0].onClick).toBeTypeOf("function");
+
+        toasts[0].onClick!();
+
+        expect(navCalls).toContainEqual({
+            method: "NavigateToSteamWeb",
+            arg: "https://store.steampowered.com/app/1086940/",
+        });
+    });
+
+    it("closes the quick access menu first, so the page is actually visible", async () => {
+        const world = makeWorld({ deals: { "game-bg3": [] } });
+        const { wishlistService, toasts, navCalls } = await boot(world);
+        await wishlistService.check();
+
+        world.deals["game-bg3"] = [deal()];
+        await wishlistService.check();
+        toasts[0].onClick!();
+
+        expect(navCalls[0].method).toBe("CloseSideMenus");
+    });
+
+    it("makes the summary toast open the game it names", async () => {
+        const world = makeWorld({
+            wishlist: [11, 22, 33, 44],
+            itadIds: { "11": "g1", "22": "g2", "33": "g3", "44": "g4" },
+            titles: { g1: "One", g2: "Two", g3: "Three", g4: "Four" },
+            deals: {},
+        });
+        const { wishlistService, toasts, navCalls } = await boot(world);
+        await wishlistService.check();
+
+        // g3 has the deepest discount, so it headlines the summary.
+        world.deals["g1"] = [deal({ cut: 30 })];
+        world.deals["g2"] = [deal({ cut: 40 })];
+        world.deals["g3"] = [deal({ cut: 80 })];
+        world.deals["g4"] = [deal({ cut: 50 })];
+        await wishlistService.check();
+
+        expect(toasts).toHaveLength(1);
+        expect(toasts[0].body).toContain("Three");
+
+        toasts[0].onClick!();
+
+        expect(navCalls).toContainEqual({
+            method: "NavigateToSteamWeb",
+            arg: "https://store.steampowered.com/app/33/",
+        });
     });
 });

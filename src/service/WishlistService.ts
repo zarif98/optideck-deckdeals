@@ -1,4 +1,4 @@
-import { ServerAPI } from "decky-frontend-lib";
+import { Navigation, ServerAPI } from "decky-frontend-lib";
 import { SETTINGS, Setting } from "../utils/Settings";
 import { priceService } from "./PriceService";
 import { Deal, pickWishlistDeal, planAnnouncements } from "../utils/Deals";
@@ -261,6 +261,22 @@ class WishlistService {
     // PART 6: Notification
     // Purpose: Surface findings as Decky toasts without flooding the user.
     // =========================================================================
+    /**
+     * Open a game's Steam store page in the Steam in-app browser.
+     *
+     * That page is where StoreInjector renders the Deckdeals module, so a
+     * tapped notification lands on the full cross-store comparison rather than
+     * just telling the user a deal exists somewhere.
+     */
+    private openStorePage(appId: string) {
+        try {
+            Navigation.CloseSideMenus();
+            Navigation.NavigateToSteamWeb(`https://store.steampowered.com/app/${appId}/`);
+        } catch (e) {
+            console.error("[Deckdeals] Could not open store page", e);
+        }
+    }
+
     private formatDeal(deal: Deal): string {
         return t("wishlist.toast.body")
             .replace("{cut}", String(deal.cut))
@@ -282,6 +298,7 @@ class WishlistService {
                     title,
                     body: this.formatDeal(candidate.deal),
                     duration: 8000,
+                    onClick: () => this.openStorePage(candidate.appId),
                 });
             }
             return;
@@ -293,6 +310,7 @@ class WishlistService {
             title: t("wishlist.toast.summaryTitle").replace("{count}", String(byDiscount.length)),
             body: `${title} - ${this.formatDeal(headline.deal)}`,
             duration: 10000,
+            onClick: () => this.openStorePage(headline.appId),
         });
     }
 

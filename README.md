@@ -59,7 +59,7 @@ All requests are made locally from your Steam Deck using Decky's secure network 
 
 Wishlist Alerts reads your wishlist from Steam's public wishlist API using the SteamID of the signed-in account. This requires your Steam wishlist to be **public** (Steam Profile → Privacy Settings → Game details). Your SteamID is sent only to Steam's own API; no wishlist data leaves your device. The check runs on a configurable interval (default: every 6 hours), and each deal is announced once per price - it will not re-notify until the price changes.
 
-The **first** check after enabling alerts records what is already on sale without notifying you. Across ~30 stores something is always discounted, so announcing that backlog would present weeks-old deals as news; from then on, an alert means a sale genuinely started. Games added to your wishlist later, and discounts that deepen, still alert normally. **Reset Alert History** clears what you have been told so the next check reports every current sale again.
+The **first** check after enabling alerts records what is already on sale without notifying you. Across ~30 stores something is always discounted, so announcing that backlog would present weeks-old deals as news; from then on, an alert means a sale genuinely started. Games added to your wishlist later, and discounts that deepen, still alert normally. Tapping a notification opens that game's Steam store page, where the Deckdeals module shows the full cross-store comparison. **Reset Alert History** clears what you have been told so the next check reports every current sale again.
 
 ## Development
 
