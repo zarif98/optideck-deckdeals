@@ -59,6 +59,8 @@ All requests are made locally from your Steam Deck using Decky's secure network 
 
 Wishlist Alerts reads your wishlist from Steam's public wishlist API using the SteamID of the signed-in account. This requires your Steam wishlist to be **public** (Steam Profile → Privacy Settings → Game details). Your SteamID is sent only to Steam's own API; no wishlist data leaves your device. The check runs on a configurable interval (default: every 6 hours), and each deal is announced once per price - it will not re-notify until the price changes.
 
+The **first** check after enabling alerts records what is already on sale without notifying you. Across ~30 stores something is always discounted, so announcing that backlog would present weeks-old deals as news; from then on, an alert means a sale genuinely started. Games added to your wishlist later, and discounts that deepen, still alert normally. **Reset Alert History** clears what you have been told so the next check reports every current sale again.
+
 ## Development
 
 Build the frontend bundle:
@@ -71,10 +73,18 @@ pnpm build
 Run the unit tests:
 
 ```bash
-pnpm test
+pnpm test        # unit + end-to-end service tests
+pnpm typecheck   # tsc --noEmit
 ```
 
-Tests cover the pure logic in `src/utils` - deal normalization, which offer triggers a wishlist alert, notification de-duplication, and validation of everything that arrives from an external API. Anything requiring the Decky runtime or a live Steam client is verified on-device instead.
+Tests cover two layers:
+
+- **Pure logic** (`src/utils`) - deal normalization, which offer triggers a wishlist alert, notification de-duplication, and validation of everything arriving from an external API.
+- **The wishlist flow end to end** (`src/service/WishlistService.test.ts`) - driven through a fake `ServerAPI`, so a sale can be made to start, deepen, lapse and return, and the resulting notification asserted, without waiting on a real sale.
+
+Only the Steam Store DOM injection needs a real device.
+
+> **Note:** `@types/node` is pinned to v18 because TypeScript 4.7 cannot parse newer versions - it fails with syntax errors in the `.d.ts` and aborts before reaching `src/`, silently disabling type checking for the whole project. Run `pnpm typecheck` and confirm it reports errors in `src/` paths, not in `node_modules`.
 
 ## Security Review
 

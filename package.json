@@ -8,7 +8,8 @@
     "test": "vitest run",
     "deploy": "./deploy.sh",
     "archive": "pnpm run build && rm -rf Deckdeals optideck-deckdeals-v$npm_package_version-beta.zip && mkdir -p Deckdeals/dist && cp dist/index.js Deckdeals/dist/ && cp main.py settings.py plugin.json package.json README.md LICENSE Deckdeals/ && zip -r optideck-deckdeals-v$npm_package_version-beta.zip Deckdeals -x \"*.DS_Store\" -x \"__MACOSX/*\" && rm -rf Deckdeals",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
@@ -30,6 +31,7 @@
     "@rollup/plugin-node-resolve": "^13.3.0",
     "@rollup/plugin-replace": "^4.0.0",
     "@rollup/plugin-typescript": "^8.3.3",
+    "@types/node": "^18.19.0",
     "@types/react": "16.14.0",
     "@types/webpack": "^5.28.0",
     "rollup": "^2.77.1",

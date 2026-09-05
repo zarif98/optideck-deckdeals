@@ -104,3 +104,25 @@ export function diffAnnouncements<T extends AnnounceCandidate>(
 
     return { fresh, nextSeen };
 }
+
+/**
+ * Decide what to announce on a given pass, accounting for first run.
+ *
+ * On the very first check there is no baseline, so every wishlisted game that
+ * happens to be discounted right now would look "new" - and across ~30 stores
+ * something is always on sale. Announcing that backlog would present weeks-old
+ * deals as fresh news. Instead the first pass records the baseline silently and
+ * says nothing; from then on a notification genuinely means something changed.
+ *
+ * This suppresses only the initial backlog. A game added to the wishlist later
+ * while already on sale is absent from `seen`, so it still alerts, and a
+ * discount that deepens still alerts because the price is part of its key.
+ */
+export function planAnnouncements<T extends AnnounceCandidate>(
+    candidates: T[],
+    seen: Record<string, string>,
+    isFirstRun: boolean
+): { announce: T[]; nextSeen: Record<string, string> } {
+    const { fresh, nextSeen } = diffAnnouncements(candidates, seen);
+    return { announce: isFirstRun ? [] : fresh, nextSeen };
+}

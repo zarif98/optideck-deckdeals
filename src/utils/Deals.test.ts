@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Deal, dealKey, diffAnnouncements, normalizeDeal, normalizeDeals, pickWishlistDeal } from "./Deals";
+import { Deal, dealKey, diffAnnouncements, normalizeDeal, normalizeDeals, pickWishlistDeal, planAnnouncements } from "./Deals";
 
 const deal = (overrides: Partial<Deal> = {}): Deal => ({
     amount: 10,
@@ -210,5 +210,58 @@ describe("diffAnnouncements", () => {
         diffAnnouncements([{ appId: "570", deal: deal() }], seen);
 
         expect(seen).toEqual({ "570": "stale" });
+    });
+});
+
+describe("planAnnouncements", () => {
+    const candidates = [
+        { appId: "570", deal: deal() },
+        { appId: "440", deal: deal({ storeId: 35 }) },
+    ];
+
+    it("stays silent on the first run instead of announcing a backlog of old sales", () => {
+        const { announce } = planAnnouncements(candidates, {}, true);
+
+        expect(announce).toEqual([]);
+    });
+
+    it("still records the baseline it stayed silent about", () => {
+        const { nextSeen } = planAnnouncements(candidates, {}, true);
+
+        expect(Object.keys(nextSeen).sort()).toEqual(["440", "570"]);
+    });
+
+    it("announces normally on every later run", () => {
+        const { announce } = planAnnouncements(candidates, {}, false);
+
+        expect(announce).toHaveLength(2);
+    });
+
+    it("does not suppress a game wishlisted later while already on sale", () => {
+        // Seeded on the first pass with one game...
+        const { nextSeen } = planAnnouncements([candidates[0]], {}, true);
+
+        // ...a second game appears, already discounted. That is news to the user.
+        const { announce } = planAnnouncements(candidates, nextSeen, false);
+
+        expect(announce.map(c => c.appId)).toEqual(["440"]);
+    });
+
+    it("does not suppress a discount that deepens after seeding", () => {
+        const { nextSeen } = planAnnouncements([{ appId: "570", deal: deal({ cut: 25 }) }], {}, true);
+
+        const { announce } = planAnnouncements(
+            [{ appId: "570", deal: deal({ cut: 50, amount: 5 }) }],
+            nextSeen,
+            false
+        );
+
+        expect(announce).toHaveLength(1);
+    });
+
+    it("re-announces everything once the seen map is cleared, so a reset is testable", () => {
+        const { announce } = planAnnouncements(candidates, {}, false);
+
+        expect(announce).toHaveLength(2);
     });
 });

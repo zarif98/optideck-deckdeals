@@ -45,6 +45,11 @@ const DeckyMenuOption = () => {
     return t("settings.wishlist.error.generic");
   };
 
+  const resetWishlistHistory = async () => {
+    await wishlistService.resetAlertHistory();
+    setWishlistStatus(t("settings.wishlist.status.reset"));
+  };
+
   const runWishlistCheck = async () => {
     setWishlistChecking(true);
     setWishlistStatus(null);
@@ -52,6 +57,10 @@ const DeckyMenuOption = () => {
       const result = await wishlistService.check();
       if (result.error) {
         setWishlistStatus(wishlistErrorText(result.error));
+      } else if (result.seeded) {
+        // A silent first pass would otherwise report "no new deals", which reads
+        // as a failure to someone who just pressed the button.
+        setWishlistStatus(t("settings.wishlist.status.seeded"));
       } else if (result.found > 0) {
         setWishlistStatus(t("settings.wishlist.status.found").replace("{count}", String(result.found)));
       } else {
@@ -569,6 +578,15 @@ const DeckyMenuOption = () => {
                 onClick={runWishlistCheck}
               >
                 {wishlistChecking ? t("settings.wishlist.checkNow.running") : t("settings.wishlist.checkNow.label")}
+              </ButtonItem>
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                disabled={wishlistChecking}
+                onClick={resetWishlistHistory}
+              >
+                {t("settings.wishlist.reset.label")}
               </ButtonItem>
             </PanelSectionRow>
             {wishlistStatus && (

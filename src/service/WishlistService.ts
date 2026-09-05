@@ -1,7 +1,7 @@
 import { ServerAPI } from "decky-frontend-lib";
 import { SETTINGS, Setting } from "../utils/Settings";
 import { priceService } from "./PriceService";
-import { Deal, diffAnnouncements, pickWishlistDeal } from "../utils/Deals";
+import { Deal, pickWishlistDeal, planAnnouncements } from "../utils/Deals";
 import { isValidSteamId64, parseWishlistAppIds } from "../utils/ApiParsing";
 import { t } from "../l10n";
 
@@ -193,7 +193,7 @@ class WishlistService {
     /**
      * Run one wishlist pass. Returns a short status the settings UI can show.
      */
-    public async check(): Promise<{ found: number; checked: number; error?: string }> {
+    public async check(): Promise<{ found: number; checked: number; error?: string; seeded?: boolean }> {
         if (this.running) return { found: 0, checked: 0, error: "busy" };
         this.running = true;
 
@@ -238,14 +238,17 @@ class WishlistService {
                 ? { ...seenRaw }
                 : {};
 
-            const { fresh, nextSeen } = diffAnnouncements(candidates, seen);
+            // The first pass only establishes a baseline - see planAnnouncements.
+            const isFirstRun = !(await SETTINGS.load(Setting.WISHLIST_SEEDED));
+            const { announce, nextSeen } = planAnnouncements(candidates, seen, isFirstRun);
 
-            if (fresh.length > 0) await this.announce(fresh);
+            if (announce.length > 0) await this.announce(announce);
 
             await SETTINGS.save(Setting.WISHLIST_SEEN, nextSeen);
             await SETTINGS.save(Setting.WISHLIST_LAST_CHECK, Date.now());
+            if (isFirstRun) await SETTINGS.save(Setting.WISHLIST_SEEDED, true);
 
-            return { found: fresh.length, checked: gameIdByApp.size };
+            return { found: announce.length, checked: gameIdByApp.size, seeded: isFirstRun };
         } catch (e) {
             console.error("[Deckdeals] Wishlist check failed", e);
             return { found: 0, checked: 0, error: "exception" };
@@ -288,9 +291,22 @@ class WishlistService {
         const title = await priceService.getGameTitle(headline.gameId) || t("wishlist.toast.fallbackTitle");
         this.serverApi.toaster.toast({
             title: t("wishlist.toast.summaryTitle").replace("{count}", String(byDiscount.length)),
-            body: `${title} - ${this.formatDeal(headline)}`,
+            body: `${title} - ${this.formatDeal(headline.deal)}`,
             duration: 10000,
         });
+    }
+
+    /**
+     * Forget which deals have already been announced, so the next check
+     * re-announces everything currently on sale.
+     *
+     * The seeded flag is deliberately left set: clearing it would make the next
+     * pass a silent first run again, which is the opposite of what someone
+     * asking to be re-told wants (and would make this useless for verifying
+     * that notifications work at all).
+     */
+    public async resetAlertHistory() {
+        await SETTINGS.save(Setting.WISHLIST_SEEN, {});
     }
 
     public getLastError(): string | null {
