@@ -42,6 +42,16 @@ You can install the plugin manually via the ZIP file:
 - **Regional Support**: Compatible with all major Steam regions and localized currencies.
 - **Quick Links**: Buttons for SteamDB and IsThereAnyDeal pages.
 
+## Screenshots
+
+**Best price right now**, on the store page - Steam wants 49.99, the Microsoft Store has it for 24.99. The all-time low sits underneath as context.
+
+![Best price now](./.github/DOCUMENTATION/images/best-price-now.jpeg)
+
+**Wishlist Deals** - every wishlisted game found on sale at any store, with the notification that opened the list.
+
+![Wishlist deals](./.github/DOCUMENTATION/images/wishlist-deals.jpeg)
+
 ## How it Works & API Usage
 
 To provide accurate and up-to-date information, Deckdeals interacts with the following services:
