@@ -396,7 +396,7 @@ describe("notification click-through", () => {
         expect(navCalls[0].method).toBe("CloseSideMenus");
     });
 
-    it("makes the summary toast open the wishlist, which reaches every flagged game", async () => {
+    it("makes the summary toast open the deals list, which shows every game found", async () => {
         const world = makeWorld({
             wishlist: [11, 22, 33, 44],
             itadIds: { "11": "g1", "22": "g2", "33": "g3", "44": "g4" },
@@ -418,9 +418,48 @@ describe("notification click-through", () => {
 
         toasts[0].onClick!();
 
-        expect(navCalls).toContainEqual({
-            method: "NavigateToSteamWeb",
-            arg: `https://store.steampowered.com/wishlist/profiles/${STEAM_ID}/`,
+        expect(navCalls).toContainEqual({ method: "Navigate", arg: "/deckdeals/deals" });
+    });
+
+    it("keeps deals in the list on later checks, after they stop being announced", async () => {
+        // Opening the list hours later must still show what is on sale, even
+        // though those deals were announced once and are now quiet.
+        const world = makeWorld({ deals: { "game-bg3": [] } });
+        const { wishlistService, settingsModule, Setting, toasts } = await boot(world);
+        await wishlistService.check();
+
+        world.deals["game-bg3"] = [deal({ cut: 50 })];
+        await wishlistService.check();
+        expect(toasts).toHaveLength(1);
+
+        // Second pass over the same sale: nothing new to announce...
+        await wishlistService.check();
+        expect(toasts).toHaveLength(1);
+
+        // ...but the list must not go empty.
+        const stored = await settingsModule.SETTINGS.load(Setting.WISHLIST_DEALS);
+        expect(Object.keys(stored)).toEqual(["1086940"]);
+    });
+
+    it("records every qualifying deal for the list, not just the ones announced", async () => {
+        const world = makeWorld({
+            wishlist: [11, 22, 33, 44],
+            itadIds: { "11": "g1", "22": "g2", "33": "g3", "44": "g4" },
+            titles: { g1: "One", g2: "Two", g3: "Three", g4: "Four" },
+            deals: {},
         });
+        const { wishlistService, settingsModule, Setting } = await boot(world);
+        await wishlistService.check();
+
+        world.deals["g1"] = [deal({ cut: 30, amount: 10 })];
+        world.deals["g2"] = [deal({ cut: 40, amount: 20 })];
+        world.deals["g3"] = [deal({ cut: 80, amount: 5, shopId: 35, shopName: "gog.com" })];
+        world.deals["g4"] = [deal({ cut: 50, amount: 30 })];
+        await wishlistService.check();
+
+        const stored = await settingsModule.SETTINGS.load(Setting.WISHLIST_DEALS);
+
+        expect(Object.keys(stored).sort()).toEqual(["11", "22", "33", "44"]);
+        expect(stored["33"]).toMatchObject({ gameId: "g3", cut: 80, amount: 5, store: "GOG" });
     });
 });

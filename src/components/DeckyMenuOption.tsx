@@ -1,11 +1,12 @@
 import { useSettings } from '../hooks/useSettings'
-import { ButtonItem, DropdownItem, PanelSection, PanelSectionRow, ToggleField } from 'decky-frontend-lib'
+import { ButtonItem, DropdownItem, Navigation, PanelSection, PanelSectionRow, ToggleField } from 'decky-frontend-lib'
 import { STORES } from '../utils/Stores';
 import { PROVIDERS } from '../utils/Providers';
 import { useState } from 'react';
 import { FaChevronDown, FaChevronRight } from 'react-icons/fa';
 import { t, getAvailableLocales } from '../l10n';
 import { wishlistService } from '../service/WishlistService';
+import { DEALS_ROUTE } from '../utils/Deals';
 import { CURRENCY_METADATA } from '../utils/CurrencyMeta';
 
 const DeckyMenuOption = () => {
@@ -578,6 +579,17 @@ const DeckyMenuOption = () => {
                 onClick={runWishlistCheck}
               >
                 {wishlistChecking ? t("settings.wishlist.checkNow.running") : t("settings.wishlist.checkNow.label")}
+              </ButtonItem>
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                onClick={() => {
+                  Navigation.CloseSideMenus();
+                  Navigation.Navigate(DEALS_ROUTE);
+                }}
+              >
+                {t("settings.wishlist.viewDeals.label")}
               </ButtonItem>
             </PanelSectionRow>
             <PanelSectionRow>

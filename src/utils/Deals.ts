@@ -126,3 +126,56 @@ export function planAnnouncements<T extends AnnounceCandidate>(
     const { fresh, nextSeen } = diffAnnouncements(candidates, seen);
     return { announce: isFirstRun ? [] : fresh, nextSeen };
 }
+
+/** One entry in the deals list, keyed by Steam app id. */
+export interface RowDeal {
+    gameId: string;
+    amount: number;
+    currency: string;
+    cut: number;
+    store: string;
+    /** Filled in lazily by the deals page once ITAD has been asked. */
+    title?: string;
+}
+
+export interface RowCandidate extends AnnounceCandidate {
+    gameId: string;
+}
+
+/**
+ * Reduce the current findings to a compact map for the deals page.
+ * Keyed by Steam app id because that is what links a row back to its store page.
+ */
+export function buildRowDeals(candidates: RowCandidate[]): Record<string, RowDeal> {
+    const out: Record<string, RowDeal> = {};
+    for (const candidate of candidates) {
+        out[candidate.appId] = {
+            gameId: candidate.gameId,
+            amount: candidate.deal.amount,
+            currency: candidate.deal.currency,
+            cut: candidate.deal.cut,
+            store: candidate.deal.store,
+        };
+    }
+    return out;
+}
+
+/** Deals list ordered by deepest discount first, which is what people scan for. */
+export function sortRowDeals(deals: Record<string, RowDeal>): { appId: string; deal: RowDeal }[] {
+    return Object.entries(deals)
+        .map(([appId, deal]) => ({ appId, deal }))
+        .sort((a, b) => b.deal.cut - a.deal.cut || a.deal.amount - b.deal.amount);
+}
+
+/** The price line shown under a game's name in the deals list. */
+export function formatRowPrice(deal: RowDeal): string {
+    return `${deal.amount.toFixed(2)} ${deal.currency} (-${deal.cut}%) at ${deal.store}`;
+}
+
+/** Route the deals list is registered at, and where notifications point. */
+export const DEALS_ROUTE = "/deckdeals/deals";
+
+/** The Steam store page a deals-list row links to. */
+export function storePageUrlFor(appId: string): string {
+    return `https://store.steampowered.com/app/${appId}/`;
+}

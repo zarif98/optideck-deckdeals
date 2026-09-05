@@ -21,5 +21,6 @@ export function resetNavCalls() {
 
 export const Navigation = {
     NavigateToSteamWeb: (url: string) => { navCalls.push({ method: "NavigateToSteamWeb", arg: url }); },
+    Navigate: (path: string) => { navCalls.push({ method: "Navigate", arg: path }); },
     CloseSideMenus: () => { navCalls.push({ method: "CloseSideMenus" }); },
 };

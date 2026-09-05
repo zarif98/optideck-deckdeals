@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Deal, dealKey, diffAnnouncements, normalizeDeal, normalizeDeals, pickWishlistDeal, planAnnouncements } from "./Deals";
+import { Deal, buildRowDeals, dealKey, diffAnnouncements, formatRowPrice, normalizeDeal, normalizeDeals, pickWishlistDeal, planAnnouncements, sortRowDeals, storePageUrlFor } from "./Deals";
 
 const deal = (overrides: Partial<Deal> = {}): Deal => ({
     amount: 10,
@@ -263,5 +263,44 @@ describe("planAnnouncements", () => {
         const { announce } = planAnnouncements(candidates, {}, false);
 
         expect(announce).toHaveLength(2);
+    });
+});
+
+describe("deals list", () => {
+    it("keys entries by Steam app id so a row can link to its store page", () => {
+        const rows = buildRowDeals([
+            { appId: "570", gameId: "g1", deal: deal({ amount: 12.5, cut: 40, store: "GOG" }) },
+        ]);
+
+        expect(rows["570"]).toEqual({
+            gameId: "g1",
+            amount: 12.5,
+            currency: "EUR",
+            cut: 40,
+            store: "GOG",
+        });
+    });
+
+    it("orders by deepest discount, then by price", () => {
+        const rows = sortRowDeals({
+            a: { gameId: "g1", amount: 30, currency: "EUR", cut: 50, store: "Steam" },
+            b: { gameId: "g2", amount: 10, currency: "EUR", cut: 80, store: "GOG" },
+            c: { gameId: "g3", amount: 5, currency: "EUR", cut: 50, store: "Fanatical" },
+        });
+
+        expect(rows.map(r => r.appId)).toEqual(["b", "c", "a"]);
+    });
+
+    it("returns an empty list when nothing has been found", () => {
+        expect(sortRowDeals({})).toEqual([]);
+    });
+
+    it("shows price, discount and store on one line", () => {
+        expect(formatRowPrice({ gameId: "g", amount: 24.99, currency: "EUR", cut: 58, store: "GOG" }))
+            .toBe("24.99 EUR (-58%) at GOG");
+    });
+
+    it("links a row to the right Steam page", () => {
+        expect(storePageUrlFor("1086940")).toBe("https://store.steampowered.com/app/1086940/");
     });
 });
