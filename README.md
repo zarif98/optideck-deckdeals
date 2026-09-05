@@ -57,9 +57,27 @@ All requests are made locally from your Steam Deck using Decky's secure network 
 
 ### Wishlist Alerts
 
-Wishlist Alerts reads your wishlist from Steam's public wishlist API using the SteamID of the signed-in account. This requires your Steam wishlist to be **public** (Steam Profile → Privacy Settings → Game details). Your SteamID is sent only to Steam's own API; no wishlist data leaves your device. The check runs on a configurable interval (default: every 6 hours), and each deal is announced once per price - it will not re-notify until the price changes.
+Wishlist Alerts reads your wishlist from Steam's public wishlist API using the SteamID of the signed-in account. This requires your Steam wishlist to be **public** (Steam Profile → Privacy Settings → *Game details*). Your SteamID is sent only to Steam's own API, and no wishlist data leaves your device.
 
-The **first** check after enabling alerts records what is already on sale without notifying you. Across ~30 stores something is always discounted, so announcing that backlog would present weeks-old deals as news; from then on, an alert means a sale genuinely started. Games added to your wishlist later, and discounts that deepen, still alert normally. Tapping a notification for a single game opens its Steam store page, where the Deckdeals module shows the full cross-store comparison. A summary notification covering several games opens the **Wishlist Deals** list, showing every game found on sale with its best price, discount and store; selecting one opens its Steam store page. The list is also reachable any time from **View Deals List** in the plugin settings. **Reset Alert History** clears what you have been told so the next check reports every current sale again.
+**When you are notified**
+
+- Checks run on a configurable interval (default: every 6 hours), and on demand via **Check Now**.
+- The **first** check records what is already on sale *without* notifying you. Across ~30 stores something is always discounted, so announcing that backlog would present weeks-old deals as news. From then on, an alert means a sale genuinely started.
+- Games added to your wishlist later while already on sale, and discounts that deepen, still alert normally.
+- Each deal is announced once per price. A sale that ends and later returns is announced again.
+- Up to three games are announced individually; beyond that you get a single summary.
+
+**Where a notification takes you**
+
+- A single-game notification opens that game's Steam store page, where the Deckdeals module shows the full cross-store comparison.
+- A summary notification opens the **Wishlist Deals** list: every game found on sale with its best price, discount and store. Selecting one opens its Steam store page.
+- The list is available any time from **View Deals List** in the plugin settings.
+
+**Controls**
+
+- **Minimum Discount** - ignore anything shallower.
+- **Check Frequency** - how often the background check runs.
+- **Reset Alert History** - forget what you have been told, so the next check reports every current sale again.
 
 ## Development
 
@@ -70,7 +88,7 @@ pnpm install
 pnpm build
 ```
 
-Run the unit tests:
+Run the tests and type checker:
 
 ```bash
 pnpm test        # unit + end-to-end service tests
@@ -79,10 +97,10 @@ pnpm typecheck   # tsc --noEmit
 
 Tests cover two layers:
 
-- **Pure logic** (`src/utils`) - deal normalization, which offer triggers a wishlist alert, notification de-duplication, and validation of everything arriving from an external API.
+- **Pure logic** (`src/utils`) - deal normalization, which offer triggers a wishlist alert, notification de-duplication and first-run seeding, deals-list ordering, and validation of everything arriving from an external API.
 - **The wishlist flow end to end** (`src/service/WishlistService.test.ts`) - driven through a fake `ServerAPI`, so a sale can be made to start, deepen, lapse and return, and the resulting notification asserted, without waiting on a real sale.
 
-Only the Steam Store DOM injection needs a real device.
+`decky-frontend-lib` cannot load outside the Steam client, so vitest aliases it to a stub (`src/test/`) that records navigation calls. Only the Steam Store DOM injection and on-screen rendering need a real device.
 
 > **Note:** `@types/node` is pinned to v18 because TypeScript 4.7 cannot parse newer versions - it fails with syntax errors in the `.d.ts` and aborts before reaching `src/`, silently disabling type checking for the whole project. Run `pnpm typecheck` and confirm it reports errors in `src/` paths, not in `node_modules`.
 

@@ -50,7 +50,6 @@ class WishlistService {
     private readonly MAX_INDIVIDUAL_TOASTS = 3;
     /** Steam app id -> ITAD game id, cached for the session. */
     private idCache = new Map<string, string>();
-    private lastError: string | null = null;
 
     public init(serverApi: ServerAPI) {
         this.serverApi = serverApi;
@@ -203,10 +202,8 @@ class WishlistService {
 
             const { appIds, error } = await this.fetchWishlistAppIds();
             if (error) {
-                this.lastError = error;
                 return { found: 0, checked: 0, error };
             }
-            this.lastError = null;
             if (appIds.length === 0) return { found: 0, checked: 0 };
 
             // Resolve ITAD ids, reusing anything already mapped this session.
@@ -348,9 +345,6 @@ class WishlistService {
         await SETTINGS.save(Setting.WISHLIST_SEEN, {});
     }
 
-    public getLastError(): string | null {
-        return this.lastError;
-    }
 }
 
 export const wishlistService = new WishlistService();

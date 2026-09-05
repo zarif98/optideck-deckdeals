@@ -2,12 +2,13 @@ import { useSettings } from '../hooks/useSettings'
 import { ButtonItem, DropdownItem, Navigation, PanelSection, PanelSectionRow, ToggleField } from 'decky-frontend-lib'
 import { STORES } from '../utils/Stores';
 import { PROVIDERS } from '../utils/Providers';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FaChevronDown, FaChevronRight } from 'react-icons/fa';
 import { t, getAvailableLocales } from '../l10n';
 import { wishlistService } from '../service/WishlistService';
 import { DEALS_ROUTE } from '../utils/Deals';
 import { CURRENCY_METADATA } from '../utils/CurrencyMeta';
+import { SETTINGS, Setting } from '../utils/Settings';
 
 const DeckyMenuOption = () => {
   const {
@@ -39,6 +40,20 @@ const DeckyMenuOption = () => {
 
   const [wishlistChecking, setWishlistChecking] = useState(false);
   const [wishlistStatus, setWishlistStatus] = useState<string | null>(null);
+  const [lastCheck, setLastCheck] = useState<number>(0);
+
+  // Answers "is this actually running?" without waiting for a notification.
+  useEffect(() => {
+    let mounted = true;
+    SETTINGS.load(Setting.WISHLIST_LAST_CHECK).then((value) => {
+      if (mounted) setLastCheck(Number(value) || 0);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  const lastCheckText = lastCheck > 0
+    ? t("settings.wishlist.status.lastChecked").replace("{time}", new Date(lastCheck).toLocaleString())
+    : t("settings.wishlist.status.never");
 
   const wishlistErrorText = (error: string) => {
     if (error === 'noSteamId') return t("settings.wishlist.error.noSteamId");
@@ -69,6 +84,7 @@ const DeckyMenuOption = () => {
       }
     } finally {
       setWishlistChecking(false);
+      setLastCheck(Number(await SETTINGS.load(Setting.WISHLIST_LAST_CHECK)) || 0);
     }
   };
 
@@ -608,6 +624,11 @@ const DeckyMenuOption = () => {
                 </div>
               </PanelSectionRow>
             )}
+            <PanelSectionRow>
+              <div style={{ fontSize: '11px', color: '#8f98a0', padding: '0 10px' }}>
+                {lastCheckText}
+              </div>
+            </PanelSectionRow>
             <PanelSectionRow>
               <div style={{ fontSize: '10px', color: '#6b7280', padding: '4px 10px', lineHeight: '1.4' }}>
                 {t("settings.wishlist.privacyNote")}

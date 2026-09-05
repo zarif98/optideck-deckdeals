@@ -59,7 +59,6 @@ export const ru: Record<string, string> = {
     // Store page (injected into Steam browser)
     "store.title": "Deckdeals",
     "store.currentPrice": "Текущая цена",
-    "store.lowestPrice": "Нижняя цена",
     "store.historyDisclaimer": "История цен за последние {period}",
     "store.loading": "Загрузка...",
     "store.loadingGraph": "Загрузка истории цен...",
@@ -71,7 +70,6 @@ export const ru: Record<string, string> = {
     "store.dataUnavailable": "Данные недоступны",
     "store.noData": "Нет данных",
     "store.noDataRecent": "Нет данных за период",
-    "store.allYearLow": "СЕЙЧАС",
     "store.notEnoughHistory": "Недостаточно данных истории",
     "store.freeGame": "Эта игра бесплатна",
     "store.hoverOn": "на",

@@ -12,7 +12,6 @@ import { STORES } from "./Stores";
 export interface Deal {
     amount: number;
     currency: string;
-    regular: number;
     cut: number;
     store: string;
     storeId: number;
@@ -32,13 +31,11 @@ export function normalizeDeal(raw: unknown): Deal | null {
 
     const storeId = typeof entry?.shop?.id === "number" ? entry.shop.id : 0;
     const url = typeof entry?.url === "string" && entry.url.startsWith("https://") ? entry.url : "";
-    const regular = typeof entry?.regular?.amount === "number" ? entry.regular.amount : amount;
     const cut = typeof entry?.cut === "number" ? entry.cut : 0;
 
     return {
         amount,
         currency: typeof entry?.price?.currency === "string" ? entry.price.currency : "USD",
-        regular,
         cut,
         store: STORES.find(s => s.id === storeId)?.title || entry?.shop?.name || "Unknown",
         storeId,

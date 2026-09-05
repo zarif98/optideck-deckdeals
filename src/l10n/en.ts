@@ -69,7 +69,6 @@ export const en: Record<string, string> = {
     "deals.empty": "No deals found yet. Open Deckdeals settings and run a check, or wait for the next automatic one.",
     "deals.footerHint": "Select a game to open its Steam store page.",
     "settings.wishlist.viewDeals.label": "View Deals List",
-    "settings.wishlist.reset.description": "Forget what you have already been told, so the next check reports every current sale again",
     "settings.wishlist.status.reset": "Alert history cleared. Run a check to be told about current sales again.",
     "settings.wishlist.status.seeded": "Baseline set from the sales running now. You will be alerted when new ones start.",
     "settings.wishlist.error.noSteamId": "Could not read your Steam account. Try again once Steam has finished signing in.",
@@ -85,7 +84,6 @@ export const en: Record<string, string> = {
     // Store page (injected into Steam browser)
     "store.title": "Deckdeals",
     "store.currentPrice": "Current",
-    "store.lowestPrice": "Lowest",
     "store.bestNow": "Best now",
     "store.noLiveDeals": "No live offers",
     "store.saveVsSteam": "(save {percent}%)",
@@ -101,7 +99,6 @@ export const en: Record<string, string> = {
     "store.dataUnavailable": "Data unavailable",
     "store.noData": "No data",
     "store.noDataRecent": "No data in period",
-    "store.allYearLow": "NOW",
     "store.notEnoughHistory": "Not enough history data",
     "store.freeGame": "This game is free",
     "store.hoverOn": "on",

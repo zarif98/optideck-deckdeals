@@ -118,6 +118,9 @@ The plugin applies strict response filtering so compromised or malformed provide
 - Fail-closed behavior:
   - Any failure returns an empty list with a status code; the watcher retries on the
     next interval and never throws into the UI.
+- Navigation:
+  - Notifications navigate only to `store.steampowered.com` app pages or the
+    plugin's own registered route; no URL from an API response is ever opened.
 - Data handling:
   - Wishlist contents stay on-device. Only the resolved ITAD game ids are sent to ITAD
     (the same endpoint used for store pages), and nothing is sent to Optideck.
@@ -163,7 +166,9 @@ The plugin applies strict response filtering so compromised or malformed provide
 | `src/utils/Settings.ts` | Frontend settings API wrapper over backend RPC and in-memory cache. |
 | `src/utils/Cache.ts` | In-memory cache and subscriber notification utility. |
 | `src/utils/Stores.ts` | Static store metadata mapping used for display names/IDs. |
-| `src/utils/Deals.ts` | Pure deal normalization, alert selection, and announcement de-duplication logic. |
+| `src/utils/Deals.ts` | Pure deal normalization, alert selection, announcement de-duplication, and deals-list shaping. |
+| `src/components/DealsPage.tsx` | Full-page list of wishlist deals found by the last check; opens store pages. |
+| `src/test/decky-frontend-lib.stub.ts` | Test-only stand-in for the Steam-client-only frontend library. |
 | `src/utils/ApiParsing.ts` | Pure validation/parsing of external API payloads and store-selection inputs. |
 | `src/utils/Deals.test.ts` | Unit tests for deal normalization and notification de-duplication. |
 | `src/utils/ApiParsing.test.ts` | Unit tests for external payload validation and store-selection handling. |

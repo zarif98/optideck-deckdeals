@@ -4,7 +4,6 @@ import { Deal, buildRowDeals, dealKey, diffAnnouncements, formatRowPrice, normal
 const deal = (overrides: Partial<Deal> = {}): Deal => ({
     amount: 10,
     currency: "EUR",
-    regular: 20,
     cut: 50,
     store: "Steam",
     storeId: 61,
@@ -25,7 +24,6 @@ describe("normalizeDeal", () => {
         expect(result).toEqual({
             amount: 14.99,
             currency: "EUR",
-            regular: 29.99,
             cut: 50,
             store: "GOG",
             storeId: 35,
@@ -67,11 +65,8 @@ describe("normalizeDeal", () => {
         expect(result?.url).toBe("");
     });
 
-    it("defaults the regular price to the current price when absent", () => {
-        const result = normalizeDeal({ price: { amount: 9.99 } });
-
-        expect(result?.regular).toBe(9.99);
-        expect(result?.cut).toBe(0);
+    it("treats an offer with no discount field as not discounted", () => {
+        expect(normalizeDeal({ price: { amount: 9.99 } })?.cut).toBe(0);
     });
 });
 
