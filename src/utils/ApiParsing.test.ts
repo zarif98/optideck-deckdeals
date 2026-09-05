@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
     buildShopsParam,
-    isLegacyStoreDefault,
     isValidAppId,
     isValidCountry,
     isValidSteamId64,
@@ -156,23 +155,6 @@ describe("buildShopsParam", () => {
     });
 });
 
-describe("isLegacyStoreDefault", () => {
-    it("recognises the old Steam-only default", () => {
-        expect(isLegacyStoreDefault([61])).toBe(true);
-    });
-
-    it.each([
-        ["an explicit multi-store selection", [61, 35]],
-        ["a single non-Steam store", [35]],
-        ["the new all-stores default", ALL_STORE_IDS],
-        ["an empty selection", []],
-        ["a non-array value", "61"],
-        ["null", null],
-        ["undefined", undefined],
-    ])("leaves %s alone", (_label, stores) => {
-        expect(isLegacyStoreDefault(stores)).toBe(false);
-    });
-});
 
 describe("input validators", () => {
     it.each(["570", "1086940", "1"])("accepts app id %s", (appId) => {

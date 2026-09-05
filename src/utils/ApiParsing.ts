@@ -85,14 +85,3 @@ export function buildShopsParam(stores: unknown): string {
     return safeIds.length > 0 ? safeIds.join(",") : String(STEAM_STORE_ID);
 }
 
-/**
- * Whether a stored store selection is the pre-1.2 Steam-only default.
- *
- * Only that exact value is migrated; any other selection is the user's own and
- * must be left alone. A user who deliberately picked Steam and nothing else is
- * indistinguishable from the old default and will be migrated too - the
- * migration runs once, so they can simply set it back.
- */
-export function isLegacyStoreDefault(stores: unknown): boolean {
-    return Array.isArray(stores) && stores.length === 1 && stores[0] === STEAM_STORE_ID;
-}

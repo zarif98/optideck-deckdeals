@@ -25,6 +25,8 @@ interface FakeDeal {
 }
 
 interface WorldState {
+    /** When true, ITAD's price endpoint fails, as it would in an outage. */
+    pricesFail?: boolean;
     /** Steam app ids on the wishlist, or null to simulate a private wishlist. */
     wishlist: number[] | null;
     /** Steam app id -> ITAD game id. Missing entries mean ITAD does not know it. */
@@ -100,6 +102,7 @@ function makeServerApi(world: WorldState) {
 
             // ITAD live prices.
             if (target.pathname === "/games/prices/v3") {
+                if (world.pricesFail) return { success: false, result: null };
                 const requested: string[] = JSON.parse(init.body);
                 return json(requested.map(id => ({
                     id,
@@ -461,5 +464,59 @@ describe("notification click-through", () => {
 
         expect(Object.keys(stored).sort()).toEqual(["11", "22", "33", "44"]);
         expect(stored["33"]).toMatchObject({ gameId: "g3", cut: 80, amount: 5, store: "GOG" });
+    });
+});
+
+describe("resilience to a price-provider outage", () => {
+    it("does not wipe the alert history when ITAD prices fail", async () => {
+        const world = makeWorld({ deals: { "game-bg3": [] } });
+        const { wishlistService, settingsModule, Setting, toasts } = await boot(world);
+        await wishlistService.check();
+
+        world.deals["game-bg3"] = [deal({ cut: 50 })];
+        await wishlistService.check();
+        expect(toasts).toHaveLength(1);
+
+        const before = await settingsModule.SETTINGS.load(Setting.WISHLIST_SEEN);
+
+        // ITAD goes down. Nothing should be forgotten.
+        world.pricesFail = true;
+        const result = await wishlistService.check();
+        expect(result.error).toBe("noPrices");
+
+        expect(await settingsModule.SETTINGS.load(Setting.WISHLIST_SEEN)).toEqual(before);
+    });
+
+    it("does not blank the deals list when ITAD prices fail", async () => {
+        const world = makeWorld({ deals: { "game-bg3": [] } });
+        const { wishlistService, settingsModule, Setting } = await boot(world);
+        await wishlistService.check();
+
+        world.deals["game-bg3"] = [deal({ cut: 50 })];
+        await wishlistService.check();
+
+        world.pricesFail = true;
+        await wishlistService.check();
+
+        const stored = await settingsModule.SETTINGS.load(Setting.WISHLIST_DEALS);
+        expect(Object.keys(stored)).toEqual(["1086940"]);
+    });
+
+    it("does not re-announce everything once ITAD recovers", async () => {
+        const world = makeWorld({ deals: { "game-bg3": [] } });
+        const { wishlistService, toasts } = await boot(world);
+        await wishlistService.check();
+
+        world.deals["game-bg3"] = [deal({ cut: 50 })];
+        await wishlistService.check();
+        expect(toasts).toHaveLength(1);
+
+        world.pricesFail = true;
+        await wishlistService.check();
+
+        world.pricesFail = false;
+        await wishlistService.check();
+
+        expect(toasts).toHaveLength(1);
     });
 });

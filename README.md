@@ -34,7 +34,7 @@ You can install the plugin manually via the ZIP file:
 
 - **Store Page Integration**: Price information is injected directly into the Steam store page.
 - **Best Price Right Now**: The headline figure is the cheapest price you can actually pay today across every selected store - not an all-time low you can no longer buy at. The historic low is kept underneath as context.
-- **Price Comparison**: Displays current prices from Steam and ~30 supported alternative providers, all enabled by default.
+- **Price Comparison**: Displays current prices from Steam and ~30 supported alternative providers, all enabled by default for new installs. An existing store selection is never changed.
 - **Wishlist Alerts**: Notifies you when a game on your Steam wishlist goes on sale at *any* supported store, not just on Steam.
 - **Price History**: Tracks historical lows and includes price trend graphs.
 - **Next Sale Prediction**: Estimates upcoming sales using 5 years of historical price data (regardless of the displayed period).
@@ -67,7 +67,7 @@ All requests are made locally from your Steam Deck using Decky's secure network 
 
 ### Wishlist Alerts
 
-Wishlist Alerts reads your wishlist from Steam's public wishlist API using the SteamID of the signed-in account. This requires your Steam wishlist to be **public** (Steam Profile → Privacy Settings → *Game details*). Your SteamID is sent only to Steam's own API, and no wishlist data leaves your device.
+Wishlist Alerts reads your wishlist from Steam's public wishlist API using the SteamID of the signed-in account. This requires your Steam wishlist to be **public** (Steam Profile → Privacy Settings → *Game details*). Your SteamID is sent only to Steam's own API. To price your wishlist, the Steam app IDs of the games on it are sent to IsThereAnyDeal - that is the only wishlist-derived data that leaves the device, and nothing is sent to Optideck.
 
 **When you are notified**
 

@@ -221,6 +221,15 @@ class WishlistService {
             if (gameIdByApp.size === 0) return { found: 0, checked: appIds.length };
 
             const dealsByGame = await priceService.getDealsForGameIds([...gameIdByApp.values()]);
+
+            // An empty map means the price fetch failed, not that every sale
+            // ended. Writing state from it would clear the alert history - so
+            // the next successful pass would re-announce everything - and blank
+            // the deals page. Leave both untouched and try again next cycle.
+            if (dealsByGame.size === 0) {
+                return { found: 0, checked: gameIdByApp.size, error: "noPrices" };
+            }
+
             const minDiscount = await this.getMinDiscount();
 
             const candidates: WishlistCandidate[] = [];

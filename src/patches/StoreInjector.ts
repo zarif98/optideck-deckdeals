@@ -302,6 +302,15 @@ export const injectStore = (serverApi: ServerAPI) => {
                     return amount; // Fallback if conversion not possible
                 };
                 
+                // Store and currency names come from the provider API. The
+                // plugin treats provider responses as untrusted elsewhere, so
+                // they are escaped before reaching innerHTML.
+                var escapeHtml = function(value) {
+                    return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) {
+                        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+                    });
+                };
+
                 var currentEl = document.getElementById('dd-current-' + appId);
                 var currentStoreEl = document.getElementById('dd-current-store-' + appId);
                 var lowestEl = document.getElementById('dd-lowest-' + appId);
@@ -763,7 +772,7 @@ export const injectStore = (serverApi: ServerAPI) => {
                     if (lowestEl) {
                         try {
                             if (bestNow) {
-                                lowestEl.innerHTML = bestNow.amount.toFixed(2) + ' ' + (bestNow.currency || targetCurrency);
+                                lowestEl.innerHTML = bestNow.amount.toFixed(2) + ' ' + escapeHtml(bestNow.currency || targetCurrency);
                             } else {
                                 lowestEl.innerHTML = '<span style="color: #8f98a0;">${t("store.noLiveDeals")}</span>';
                             }
@@ -774,7 +783,7 @@ export const injectStore = (serverApi: ServerAPI) => {
                     if (lowestDateEl) {
                         try {
                             if (bestNow) {
-                                var storeHtml = '<span style="color: #67c1f5;">' + bestNow.store + '</span>';
+                                var storeHtml = '<span style="color: #67c1f5;">' + escapeHtml(bestNow.store) + '</span>';
                                 if (currentAmount > 0 && bestConverted !== null && bestConverted < currentAmount - 0.01) {
                                     var saving = ((currentAmount - bestConverted) / currentAmount) * 100;
                                     storeHtml += ' <span style="color: #beee11;">' +
@@ -792,7 +801,7 @@ export const injectStore = (serverApi: ServerAPI) => {
                         try {
                             if (displayLowest) {
                                 histLowEl.innerHTML = '${t("store.historicLowPrefix")} ' +
-                                    displayLowest.originalAmount.toFixed(2) + ' ' + displayLowest.originalCurrency +
+                                    displayLowest.originalAmount.toFixed(2) + ' ' + escapeHtml(displayLowest.originalCurrency) +
                                     ' - ' + formatDate(displayLowest.date);
                             } else {
                                 histLowEl.innerHTML = '';

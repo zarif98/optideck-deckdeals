@@ -103,7 +103,7 @@ const DealsPage = () => {
                                     {deal.title || appId}
                                 </div>
                                 <div style={{ fontSize: "12px", color: "#67c1f5", marginTop: "2px" }}>
-                                    {formatRowPrice(deal)}
+                                    {formatRowPrice(deal, t("deals.priceLine"))}
                                 </div>
                             </div>
                             <div

@@ -290,9 +290,18 @@ describe("deals list", () => {
         expect(sortRowDeals({})).toEqual([]);
     });
 
-    it("shows price, discount and store on one line", () => {
-        expect(formatRowPrice({ gameId: "g", amount: 24.99, currency: "EUR", cut: 58, store: "GOG" }))
+    it("fills the localized template with price, discount and store", () => {
+        const deal = { gameId: "g", amount: 24.99, currency: "EUR", cut: 58, store: "GOG" };
+
+        expect(formatRowPrice(deal, "{price} (-{cut}%) at {store}"))
             .toBe("24.99 EUR (-58%) at GOG");
+    });
+
+    it("lets a translation reorder the parts", () => {
+        const deal = { gameId: "g", amount: 24.99, currency: "EUR", cut: 58, store: "GOG" };
+
+        expect(formatRowPrice(deal, "{store}: -{cut}% ({price})"))
+            .toBe("GOG: -58% (24.99 EUR)");
     });
 
     it("links a row to the right Steam page", () => {

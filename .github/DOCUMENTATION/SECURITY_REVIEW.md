@@ -122,8 +122,11 @@ The plugin applies strict response filtering so compromised or malformed provide
   - Notifications navigate only to `store.steampowered.com` app pages or the
     plugin's own registered route; no URL from an API response is ever opened.
 - Data handling:
-  - Wishlist contents stay on-device. Only the resolved ITAD game ids are sent to ITAD
-    (the same endpoint used for store pages), and nothing is sent to Optideck.
+  - Wishlist membership is disclosed to ITAD only as Steam app ids, sent to the same
+    pricing endpoints used for store pages; nothing is sent to Optideck. No other
+    wishlist data (ordering, priorities, dates added) leaves the device.
+  - A failed price fetch never overwrites stored alert state, so an outage cannot
+    clear the de-duplication history or blank the deals list.
   - Notification de-duplication state is stored in local plugin settings only.
 
 ### ExchangeRate API (`src/service/ExchangeRateService.ts`)

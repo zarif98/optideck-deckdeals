@@ -164,9 +164,15 @@ export function sortRowDeals(deals: Record<string, RowDeal>): { appId: string; d
         .sort((a, b) => b.deal.cut - a.deal.cut || a.deal.amount - b.deal.amount);
 }
 
-/** The price line shown under a game's name in the deals list. */
-export function formatRowPrice(deal: RowDeal): string {
-    return `${deal.amount.toFixed(2)} ${deal.currency} (-${deal.cut}%) at ${deal.store}`;
+/**
+ * The price line shown under a game's name in the deals list.
+ * Templated so translations can reorder the parts, as the toast body does.
+ */
+export function formatRowPrice(deal: RowDeal, template: string): string {
+    return template
+        .replace("{price}", `${deal.amount.toFixed(2)} ${deal.currency}`)
+        .replace("{cut}", String(deal.cut))
+        .replace("{store}", deal.store);
 }
 
 /** Route the deals list is registered at, and where notifications point. */

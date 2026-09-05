@@ -1,7 +1,6 @@
 import { ServerAPI } from "decky-frontend-lib";
 import { CACHE } from "./Cache";
 import { ALL_STORE_IDS } from "./Stores";
-import { isLegacyStoreDefault } from "./ApiParsing";
 
 export enum Setting {
   FONTSIZE = "fontSize",
@@ -22,7 +21,6 @@ export enum Setting {
   WISHLIST_DEALS = "wishlistDeals",
   WISHLIST_SEEDED = "wishlistSeeded",
   WISHLIST_LAST_CHECK = "wishlistLastCheck",
-  STORES_MIGRATED = "storesMigrated",
 }
 
 export let SETTINGS: Settings
@@ -48,7 +46,6 @@ export class Settings {
     wishlistDeals: {},
     wishlistSeeded: false,
     wishlistLastCheck: 0,
-    storesMigrated: false,
   };
 
   constructor(serverAPI: ServerAPI) {
@@ -79,23 +76,6 @@ export class Settings {
     })
   }
 
-  /**
-   * One-time upgrade for installs created before all stores were enabled by
-   * default. Users who never touched the store list were pinned to Steam-only
-   * ([61]), which made the cross-store comparison useless for them. Anyone who
-   * picked their own stores keeps their selection untouched.
-   */
-  async migrate() {
-    const alreadyMigrated = await this.load(Setting.STORES_MIGRATED);
-    if (alreadyMigrated) return;
-
-    const stores = await this.load(Setting.STORES);
-    if (isLegacyStoreDefault(stores)) {
-      await this.save(Setting.STORES, ALL_STORE_IDS);
-    }
-
-    await this.save(Setting.STORES_MIGRATED, true);
-  }
 
   async save(key: Setting, value: any) {
     CACHE.setValue(key, value)
